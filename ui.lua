@@ -36,7 +36,7 @@ local UI_TEXT = {
 	ConfirmBtn        = "Yes",
 	CancelBtn         = "No",
 	Intro             = '<font color="#FFFFFF">Scripts by | </font><font color="#8B0000">AKATSUKI</font>',
-	Tabs              = { Player = "Player", Combat = "Combat", Visuals = "Visuals", Teleports = "Teleports", Settings = "Settings" },
+	Tabs              = { Player = "Player", Combat = "Combat", Teleports = "Teleports", Settings = "Settings" },
 		Options           = {
 		Aimbot      = { Title = "Aimbot Murderer",  Desc = "Automatic aimbot that stays in the murderer's head non-stop." },
 		Reach       = { Title = "Knife Reach",       Desc = "Significantly increases your knife attack reach (18 studs)." },
@@ -472,12 +472,10 @@ end
 TabsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateTabsCanvas)
 TabsContainer:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateTabsCanvas)
 
--- ==================== ACTIVEBAR REUTILIZÁVEL (CORRIGIDA) ====================
--- Criamos um contêiner com ClipsDescendants para impedir que a ActiveBar
--- vaze por cima da barra de pesquisa e do perfil.
+-- ==================== ACTIVEBAR REUTILIZÁVEL ====================
 local ActiveBarContainer   = Instance.new("Frame", LeftPanel)
 ActiveBarContainer.Name    = "ActiveBarContainer"
-ActiveBarContainer.Size    = UDim2.new(1, -8, 1, -152) -- Mesmo tamanho e local do TabsContainer
+ActiveBarContainer.Size    = UDim2.new(1, -8, 1, -152) 
 ActiveBarContainer.Position = UDim2.new(0, 4, 0, 87)
 ActiveBarContainer.BackgroundTransparency = 1
 ActiveBarContainer.ClipsDescendants = true
@@ -487,7 +485,7 @@ local sharedActiveBar      = Instance.new("Frame", ActiveBarContainer)
 sharedActiveBar.Name       = "SharedActiveBar"
 sharedActiveBar.AnchorPoint = Vector2.new(0, 0.5)
 sharedActiveBar.Size       = UDim2.new(0, 3, 0, 22)
-sharedActiveBar.Position   = UDim2.new(0, 7, 0, 0) -- 11 absoluto - 4 do container
+sharedActiveBar.Position   = UDim2.new(0, 7, 0, 0) 
 sharedActiveBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 sharedActiveBar.BorderSizePixel = 0
 sharedActiveBar.Visible    = false
@@ -840,6 +838,36 @@ btnNo.MouseEnter:Connect(function()  TweenService:Create(btnNo,  TweenInfo.new(0
 btnNo.MouseLeave:Connect(function()  TweenService:Create(btnNo,  TweenInfo.new(0.12, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(30, 30, 30)}):Play() end)
 
 AplicarFadeSincronizado(confirmCard, true, 0)
+
+-- ==================== RESPONSIVE UI (MOBILE FIX) ====================
+local mainUIScale = Instance.new("UIScale", mainWrapper)
+local floatUIScale = Instance.new("UIScale", FloatBtn)
+local confirmUIScale = Instance.new("UIScale", confirmCard)
+
+local TargetScale = 1
+
+local function UpdateResolution()
+	local vp = workspace.CurrentCamera.ViewportSize
+	if vp.X > 0 and vp.Y > 0 then
+		if vp.X < 800 or vp.Y < 500 then
+			-- Calcula a escala com base na resolução de um celular médio para adaptar.
+			TargetScale = math.clamp(math.min(vp.X / 800, vp.Y / 500), 0.45, 1)
+		else
+			TargetScale = 1
+		end
+		
+		if UIState == "OPEN" and not isTransitioning then
+			mainUIScale.Scale = TargetScale
+		end
+		floatUIScale.Scale = math.clamp(TargetScale * 1.15, 0.6, 1)
+		if not isConfirmOpen then
+			confirmUIScale.Scale = TargetScale
+		end
+	end
+end
+
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(UpdateResolution)
+UpdateResolution()
 
 -- ==================== RENDERSTEP UNIFICADO ====================
 RunService.RenderStepped:Connect(function()
@@ -1460,7 +1488,7 @@ local function UpdateActiveBarPosition(animar)
 
 		local btnAbsSize = targetBtn.AbsoluteSize.Y
 		local btnAbsPos  = targetBtn.AbsolutePosition.Y
-		local panelAbsY  = ActiveBarContainer.AbsolutePosition.Y -- Agora pegando a posição relativa ao Container!
+		local panelAbsY  = ActiveBarContainer.AbsolutePosition.Y
 
 		if (btnAbsSize == 0 or btnAbsPos == 0 or panelAbsY == 0) and deferCount < MAX_DEFER then
 			task.defer(aplicar)
@@ -1547,10 +1575,9 @@ local function createTabBtn(tabName)
 	imageLabel.ZIndex          = 13
 	imageLabel.ImageColor3     = Color3.fromRGB(150, 150, 150)
 
-	if tabName == "Player"     then imageLabel.Image = "rbxthumb://type=Asset&id=71234705040146&w=150&h=150"
+	if tabName == "Player"        then imageLabel.Image = "rbxthumb://type=Asset&id=71234705040146&w=150&h=150"
 	elseif tabName == "Teleports" then imageLabel.Image = "rbxthumb://type=Asset&id=131082536388353&w=150&h=150"
 	elseif tabName == "Settings"  then imageLabel.Image = "rbxthumb://type=Asset&id=88409765080516&w=150&h=150"
-	elseif tabName == "Visuals"   then imageLabel.Image = "rbxthumb://type=Asset&id=97681798175944&w=150&h=150"
 	elseif tabName == "Combat"    then imageLabel.Image = "rbxthumb://type=Asset&id=105897102093789&w=150&h=150" end
 
 	local tabLabel             = Instance.new("TextLabel", tabBtn)
@@ -1745,27 +1772,18 @@ local function AlternarConfirmacao(exibir)
 
 		TweenService:Create(confirmBlur, TweenInfo.new(tempoAnim, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = 28}):Play()
 
-		local oldScale = confirmCard:FindFirstChildOfClass("UIScale")
-		if oldScale then oldScale:Destroy() end
-
-		confirmCard.Size = UDim2.new(0, 280, 0, 115)
-		local cardScale  = Instance.new("UIScale", confirmCard)
-		cardScale.Scale  = 0.88
-		TweenService:Create(cardScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+		confirmUIScale.Scale = TargetScale * 0.88
+		TweenService:Create(confirmUIScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = TargetScale}):Play()
 		AplicarFadeSincronizado(confirmCard, false, tempoAnim)
 
 	else
 		TweenService:Create(confirmBlur, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = 0}):Play()
 		AplicarFadeSincronizado(confirmCard, true, tempoAnim)
-		local sc = confirmCard:FindFirstChildOfClass("UIScale")
-		if sc then
-			TweenService:Create(sc, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.88}):Play()
-		end
+		TweenService:Create(confirmUIScale, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = TargetScale * 0.88}):Play()
+		
 		task.delay(tempoAnim + 0.05, function()
 			if not isConfirmOpen then
 				confirmOverlay.Visible = false
-				local sc2 = confirmCard:FindFirstChildOfClass("UIScale")
-				if sc2 then sc2:Destroy() end
 				if UIState == "OPEN" then
 					mainWrapper.Visible = true
 				end
@@ -1814,7 +1832,6 @@ AplicarClickFlash(CloseBtn,    CloseIcon)
 -- ==================== CRIAR ABAS ====================
 createTabBtn("Player")
 createTabBtn("Combat")
-createTabBtn("Visuals")
 createTabBtn("Teleports")
 createTabBtn("Settings")
 
@@ -1822,18 +1839,17 @@ createTabBtn("Settings")
 createToggle(togglesContainer, "Speed",        "Player")
 createToggle(togglesContainer, "AntiFling",    "Player")
 createToggle(togglesContainer, "Invisibility", "Player")
+createToggle(togglesContainer, "ESP",          "Player")
+createToggle(togglesContainer, "XRay",         "Player")
 
 createToggle(togglesContainer, "Aimbot",       "Combat")
 createToggle(togglesContainer, "Reach",        "Combat")
 createToggle(togglesContainer, "KnifeThrow",   "Combat")
-createToggle(togglesContainer, "AutoDodge",    "Combat")
 createToggle(togglesContainer, "KillAll",      "Combat")
-
-createToggle(togglesContainer, "ESP",          "Visuals")
-createToggle(togglesContainer, "XRay",         "Visuals")
 
 createToggle(togglesContainer, "TpToGun",      "Teleports")
 createToggle(togglesContainer, "SafeSpot",     "Teleports")
+createToggle(togglesContainer, "AutoDodge",    "Teleports")
 
 createToggle(togglesContainer, "AutoCollect",  "Settings")
 createToggle(togglesContainer, "ChatRoles",    "Settings")
@@ -1901,12 +1917,11 @@ local function ExecutarIntroAkat()
 	UIState             = "OPEN"
 	isTransitioning     = false
 
-	local MainScale     = Instance.new("UIScale", mainWrapper)
-	MainScale.Scale     = 0.85
+	mainUIScale.Scale = TargetScale * 0.85
 	AplicarFadeSincronizado(mainWrapper, true, 0)
 	AplicarFadeSincronizado(mainWrapper, false, 0.35)
 
-	local openScale = TweenService:Create(MainScale, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1})
+	local openScale = TweenService:Create(mainUIScale, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = TargetScale})
 	openScale:Play()
 
 	FloatBtn.Size = UDim2.new(0, 0, 0, 0)
@@ -1921,7 +1936,6 @@ local function ExecutarIntroAkat()
 	CriarNotificacaoDiscord()
 
 	openScale.Completed:Connect(function()
-		MainScale:Destroy()
 		pcall(function() Blur:Destroy() end)
 		IntroFrame:Destroy()
 		task.defer(function()
