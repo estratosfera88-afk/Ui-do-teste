@@ -61,6 +61,46 @@ local isExpanded    = false
 local originalTrans = {}
 local isConfirmOpen = false
 
+-- ==================== RESPONSIVIDADE / ESTADO DE TRANSIÇÃO ====================
+local viewportConn = nil
+local stateToken = 0
+local activeWindowTween = nil
+local activeFadeTweens = {}
+local filterGeneration = 0
+
+local function GetViewportSize()
+	local camera = workspace.CurrentCamera
+	if camera then
+		local size = camera.ViewportSize
+		if size.X > 0 and size.Y > 0 then return size end
+	end
+	return Vector2.new(1280, 720)
+end
+
+local function ClampNumber(v, min, max)
+	if max < min then return max end
+	return math.max(min, math.min(max, v))
+end
+
+-- Forward declarations used by the responsive layout helper.
+local SearchContainer, TabsContainer, ControlsFrame, BadgeFrame, togglesContainer
+local UpdateCanvasSize, UpdateActiveBarPosition
+
+local function GetWindowSize(expanded)
+	local vp = GetViewportSize()
+	local maxW = expanded and 800 or 640
+	local maxH = expanded and 480 or 360
+	local minW = expanded and 520 or 420
+	local minH = expanded and 330 or 280
+	local availableW = math.max(240, vp.X - 12)
+	local availableH = math.max(220, vp.Y - 12)
+	minW = math.min(minW, availableW)
+	minH = math.min(minH, availableH)
+	local width = ClampNumber(vp.X * 0.92, minW, math.min(maxW, availableW))
+	local height = ClampNumber(vp.Y * (expanded and 0.78 or 0.62), minH, math.min(maxH, availableH))
+	return UDim2.fromOffset(math.floor(width), math.floor(height))
+end
+
 -- ==================== SCREENGUI ====================
 local screenGui           = Instance.new("ScreenGui")
 screenGui.Name            = "DeltaAkatUniversalUI"
@@ -207,7 +247,7 @@ local SetUIState
 local mainWrapper         = Instance.new("Frame", screenGui)
 mainWrapper.Name          = "MainWrapper"
 mainWrapper.AnchorPoint   = Vector2.new(0.5, 0.5)
-mainWrapper.Size          = UDim2.new(0, 640, 0, 360)
+mainWrapper.Size          = GetWindowSize(false)
 mainWrapper.Position      = UDim2.new(0.5, 0, 0.5, 0)
 mainWrapper.BackgroundTransparency = 1
 mainWrapper.Visible       = false
@@ -240,15 +280,15 @@ end)
 UserInputService.InputChanged:Connect(function(input)
 	if dragUIToggle and input == dragUIInput then
 		local delta   = input.Position - dragUIStart
-		local vp      = workspace.CurrentCamera.ViewportSize
-		local hw      = mainWrapper.Size.X.Offset / 2
-		local hh      = mainWrapper.Size.Y.Offset / 2
+		local vp      = GetViewportSize()
+		local hw      = mainWrapper.AbsoluteSize.X / 2
+		local hh      = mainWrapper.AbsoluteSize.Y / 2
 		local newX    = startUIPos.X.Offset + delta.X
 		local newY    = startUIPos.Y.Offset + delta.Y
 		local absX    = vp.X * startUIPos.X.Scale + newX
 		local absY    = vp.Y * startUIPos.Y.Scale + newY
-		absX          = math.clamp(absX, hw, vp.X - hw)
-		absY          = math.clamp(absY, hh, vp.Y - hh)
+		absX          = math.clamp(absX, hw + 2, vp.X - hw - 2)
+		absY          = math.clamp(absY, hh + 2, vp.Y - hh - 2)
 		mainWrapper.Position = UDim2.new(0, absX, 0, absY)
 	end
 
@@ -256,8 +296,8 @@ UserInputService.InputChanged:Connect(function(input)
 		local delta   = input.Position - dragStartF
 		if delta.Magnitude > 5 then isDraggingF = true end
 
-		local vp      = workspace.CurrentCamera.ViewportSize
-		local half    = 22
+		local vp      = GetViewportSize()
+		local half    = math.max(18, FloatBtn.AbsoluteSize.X / 2)
 		local baseAbsX = vp.X * startPosF.X.Scale + startPosF.X.Offset
 		local baseAbsY = vp.Y * startPosF.Y.Scale + startPosF.Y.Offset
 		local newAbsX  = math.clamp(baseAbsX + delta.X, half, vp.X - half)
@@ -356,6 +396,47 @@ RightPanel.Position        = UDim2.new(0, 220, 0, 0)
 RightPanel.BackgroundTransparency = 1
 RightPanel.ZIndex          = 5
 
+local function ApplyResponsiveLayout()
+	if not mainWrapper or not mainWrapper.Parent then return end
+	local width = mainWrapper.AbsoluteSize.X
+	local leftWidth = ClampNumber(width * 0.34, 170, 220)
+	LeftPanel.Size = UDim2.new(0, math.floor(leftWidth), 1, 0)
+	RightPanel.Size = UDim2.new(1, -math.floor(leftWidth), 1, 0)
+	RightPanel.Position = UDim2.new(0, math.floor(leftWidth), 0, 0)
+
+	local compact = width < 560
+	HeaderImage.Size = UDim2.fromOffset(compact and 22 or 24, compact and 22 or 24)
+	HeaderImage.Position = UDim2.new(0, 10, 0.5, -(compact and 11 or 12))
+	title.Position = UDim2.new(0, compact and 36 or 40, 0, 4)
+	title.Size = UDim2.new(1, compact and -40 or -44, 0, 16)
+	title.TextSize = compact and 11.5 or 13
+	subtitle.Position = UDim2.new(0, compact and 36 or 40, 0, 20)
+	subtitle.Size = UDim2.new(1, compact and -40 or -44, 0, 12)
+
+	SearchContainer.Size = UDim2.new(1, -16, 0, compact and 34 or 36)
+	SearchContainer.Position = UDim2.new(0, 8, 0, 44)
+
+	if ControlsFrame then
+		ControlsFrame.Size = UDim2.new(0, compact and 104 or 130, 1, 0)
+		ControlsFrame.Position = UDim2.new(1, -(compact and 104 or 130), 0, 0)
+	end
+	if BadgeFrame then
+		BadgeFrame.Position = UDim2.new(0, compact and 8 or 12, 0, 9)
+		BadgeFrame.Size = UDim2.fromOffset(compact and 40 or 44, 18)
+	end
+	if togglesContainer then
+		togglesContainer.Position = UDim2.new(0, 6, 0, compact and 40 or 42)
+		togglesContainer.Size = UDim2.new(1, -12, 1, -(compact and 46 or 48))
+	end
+
+	if TabsContainer then
+		TabsContainer.Size = UDim2.new(1, -8, 1, -152)
+	\end
+
+	pcall(function() UpdateCanvasSize() end)
+	pcall(function() UpdateActiveBarPosition(false) end)
+end
+
 -- ==================== HEADER DA BARRA LATERAL ====================
 local HeaderLeft           = Instance.new("Frame", LeftPanel)
 HeaderLeft.Size            = UDim2.new(1, 0, 0, 36)
@@ -394,7 +475,7 @@ subtitle.TextXAlignment    = Enum.TextXAlignment.Left
 subtitle.ZIndex            = 21
 
 -- ==================== BARRA DE PESQUISA ====================
-local SearchContainer      = Instance.new("Frame", LeftPanel)
+SearchContainer      = Instance.new("Frame", LeftPanel)
 SearchContainer.Name       = "SearchContainer"
 SearchContainer.Size       = UDim2.new(1, -16, 0, 36)
 SearchContainer.Position   = UDim2.new(0, 8, 0, 44)
@@ -445,7 +526,7 @@ searchTextBox.Active       = true
 searchTextBox.ClearTextOnFocus = false
 
 -- ==================== TABS CONTAINER ====================
-local TabsContainer        = Instance.new("ScrollingFrame", LeftPanel)
+TabsContainer        = Instance.new("ScrollingFrame", LeftPanel)
 TabsContainer.Name         = "TabsContainer"
 TabsContainer.Size         = UDim2.new(1, -8, 1, -152)
 TabsContainer.Position     = UDim2.new(0, 4, 0, 87)
@@ -622,7 +703,7 @@ topButtons.Position        = UDim2.new(0, 0, 0, 0)
 topButtons.BackgroundTransparency = 1
 topButtons.ZIndex          = 20
 
-local ControlsFrame        = Instance.new("Frame", topButtons)
+ControlsFrame        = Instance.new("Frame", topButtons)
 ControlsFrame.Size         = UDim2.new(0, 130, 1, 0)
 ControlsFrame.Position     = UDim2.new(1, -130, 0, 0)
 ControlsFrame.BackgroundTransparency = 1
@@ -663,7 +744,7 @@ local MinimizeBtn, MinimizeIcon = CriarBotaoTopo("MinimizeBtn", "rbxthumb://type
 local ExpandBtn,   ExpandIcon   = CriarBotaoTopo("ExpandBtn",   "rbxthumb://type=Asset&id=78749046909931&w=150&h=150", 2)
 local CloseBtn,    CloseIcon    = CriarBotaoTopo("CloseBtn",    "rbxthumb://type=Asset&id=70710316269357&w=150&h=150", 3)
 
-local BadgeFrame           = Instance.new("Frame", RightPanel)
+BadgeFrame           = Instance.new("Frame", RightPanel)
 BadgeFrame.Name            = "BadgeFrame"
 BadgeFrame.Size            = UDim2.new(0, 44, 0, 18)
 BadgeFrame.Position        = UDim2.new(0, 12, 0, 9)
@@ -700,7 +781,7 @@ BadgeText.TextSize         = 8.5
 BadgeText.ZIndex           = 16
 
 -- ==================== TOGGLES CONTAINER ====================
-local togglesContainer     = Instance.new("ScrollingFrame", RightPanel)
+togglesContainer     = Instance.new("ScrollingFrame", RightPanel)
 togglesContainer.Name      = "TogglesContainer"
 togglesContainer.Size      = UDim2.new(1, -12, 1, -48)
 togglesContainer.Position  = UDim2.new(0, 6, 0, 42)
@@ -727,10 +808,15 @@ uiPadding.PaddingBottom    = UDim.new(0, 8)
 uiPadding.PaddingLeft      = UDim.new(0, 4)
 uiPadding.PaddingRight     = UDim.new(0, 6)
 
-local function UpdateCanvasSize()
+UpdateCanvasSize = function()
+	if not togglesContainer or not containerLayout then return end
 	local contentHeight = containerLayout.AbsoluteContentSize.Y + 24
-	local minHeight     = togglesContainer.AbsoluteSize.Y + 1
-	togglesContainer.CanvasSize = UDim2.new(0, 0, 0, math.max(contentHeight, minHeight))
+	local viewportHeight = togglesContainer.AbsoluteSize.Y
+	local canvasHeight = math.max(contentHeight, viewportHeight + 1)
+	togglesContainer.CanvasSize = UDim2.fromOffset(0, math.ceil(canvasHeight))
+	if togglesContainer.CanvasPosition.Y > math.max(0, canvasHeight - viewportHeight) then
+		togglesContainer.CanvasPosition = Vector2.new(0, math.max(0, canvasHeight - viewportHeight))
+	end
 end
 
 containerLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateCanvasSize)
@@ -842,15 +928,21 @@ btnNo.MouseLeave:Connect(function()  TweenService:Create(btnNo,  TweenInfo.new(0
 AplicarFadeSincronizado(confirmCard, true, 0)
 
 -- ==================== RENDERSTEP UNIFICADO ====================
-RunService.RenderStepped:Connect(function()
-	local t = os.clock()
-	SingleRedGrad.Rotation    = (t * 12)  % 360
-	confStrokeGrad.Rotation   = (t * 15)  % 360
-	uGrad.Rotation            = (t * 60)  % 360
-	avGrad.Rotation           = (t * 60)  % 360
-	badgeGrad.Rotation        = (t * 10)  % 360
-	badgeStrokeGrad.Rotation  = (t * 10)  % 360
-end)
+do
+	local lastGradientUpdate = 0
+	RunService.RenderStepped:Connect(function()
+		local now = os.clock()
+		-- Mantém a animação suave sem reescrever propriedades em excesso.
+		if now - lastGradientUpdate < (1 / 60) then return end
+		lastGradientUpdate = now
+		SingleRedGrad.Rotation   = (now * 12) % 360
+		confStrokeGrad.Rotation  = (now * 15) % 360
+		uGrad.Rotation           = (now * 60) % 360
+		avGrad.Rotation          = (now * 60) % 360
+		badgeGrad.Rotation       = (now * 10) % 360
+		badgeStrokeGrad.Rotation = (now * 10) % 360
+	end)
+end
 
 -- ==================== SISTEMA DE NOTIFICAÇÃO (STACK / FILA) ====================
 local ActiveNotifications = {}
@@ -1405,96 +1497,106 @@ end
 -- ==================== FILTRO / PESQUISA ====================
 local filterDebounceThread = nil
 
-local function filterToggles(currentActiveTab, query)
-	local searchQuery = (query or ""):lower()
-	local itemIndex   = 0
-	for _, child in ipairs(togglesContainer:GetChildren()) do
-		if child:IsA("Frame") and child.Name ~= "UIListLayout" and child.Name ~= "UIPadding" then
-			local itemTab       = child:GetAttribute("Tab") or "Combat"
-			local shouldBeVisible = false
-			if searchQuery ~= "" then
-				local titleLabel = child:FindFirstChild("Title")
-				local descLabel  = child:FindFirstChild("Description")
-				local matchTitle = titleLabel and titleLabel.Text:lower():find(searchQuery) ~= nil
-				local matchDesc  = descLabel  and descLabel.Text:lower():find(searchQuery)  ~= nil
-				shouldBeVisible  = matchTitle or matchDesc
-			else
-				shouldBeVisible = (itemTab == currentActiveTab)
-			end
+local function filterToggles(currentActiveTab, query, animate)
+	filterGeneration += 1
+	local generation = filterGeneration
+	local searchQuery = (query or ""):lower():match("^%s*(.-)%s*$") or ""
+	local itemIndex = 0
 
-			child.Visible = shouldBeVisible
+	for _, child in ipairs(togglesContainer:GetChildren()) do
+		if child:IsA("Frame") and child:GetAttribute("ConfigKey") then
+			local itemTab = child:GetAttribute("Tab") or "Combat"
+			local titleLabel = child:FindFirstChild("Title")
+			local descLabel = child:FindFirstChild("Description")
+			local haystack = ((titleLabel and titleLabel.Text or "") .. " " .. (descLabel and descLabel.Text or "")):lower()
+			local matchesSearch = searchQuery == "" or haystack:find(searchQuery, 1, true) ~= nil
+			-- Busca fica limitada à aba atual para evitar resultados "soltos".
+			local shouldBeVisible = itemTab == currentActiveTab and matchesSearch
+
 			if shouldBeVisible then
-				itemIndex = itemIndex + 1
-				child.Size = UDim2.new(1, -10, 0, 0)
-				child.BackgroundTransparency = 1
+				itemIndex += 1
+				child.Visible = true
+				local scale = child:FindFirstChildOfClass("UIScale")
 				local t = child:FindFirstChild("Title")
 				local d = child:FindFirstChild("Description")
-				if t then t.TextTransparency = 1 end
-				if d then d.TextTransparency = 1 end
-				local delay = (itemIndex - 1) * 0.02
-				task.delay(delay, function()
-					if not child or not child.Parent then return end
-					TweenService:Create(child, TweenInfo.new(0.2, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), {
-						Size = UDim2.new(1, -10, 0, 60), BackgroundTransparency = 0.45
-					}):Play()
-					if t then TweenService:Create(t, TweenInfo.new(0.15), {TextTransparency = 0}):Play() end
-					if d then TweenService:Create(d, TweenInfo.new(0.15), {TextTransparency = 0}):Play() end
-				end)
+
+				if animate ~= false then
+					if scale then scale.Scale = 0.96 end
+					child.BackgroundTransparency = 1
+					if t then t.TextTransparency = 1 end
+					if d then d.TextTransparency = 1 end
+					local delayTime = (itemIndex - 1) * 0.025
+				task.delay(delayTime, function()
+						if generation ~= filterGeneration or not child.Parent then return end
+						local info = TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+						if scale then TweenService:Create(scale, info, {Scale = 1}):Play() end
+						TweenService:Create(child, info, {BackgroundTransparency = 0.45}):Play()
+						if t then TweenService:Create(t, TweenInfo.new(0.16, Enum.EasingStyle.Quad), {TextTransparency = 0}):Play() end
+						if d then TweenService:Create(d, TweenInfo.new(0.16, Enum.EasingStyle.Quad), {TextTransparency = 0}):Play() end
+					end)
+				else
+					if scale then scale.Scale = 1 end
+					child.BackgroundTransparency = 0.45
+					if t then t.TextTransparency = 0 end
+					if d then d.TextTransparency = 0 end
+				end
+			else
+				child.Visible = false
+				local scale = child:FindFirstChildOfClass("UIScale")
+				if scale then scale.Scale = 0.96 end
 			end
 		end
 	end
-	task.delay(0.05, function() pcall(UpdateCanvasSize) end)
+
+	togglesContainer.CanvasPosition = Vector2.new(0, 0)
+	task.defer(UpdateCanvasSize)
 end
 
 -- ==================== ACTIVEBAR POSITION UPDATE ====================
-local function UpdateActiveBarPosition(animar)
+local activeBarTween = nil
+UpdateActiveBarPosition = function(animar)
 	local targetBtn = tabButtons[activeTab]
-	if not targetBtn or not sharedActiveBar.Visible then return end
+	if not targetBtn or not targetBtn.Parent or not sharedActiveBar.Visible then return end
+	if ActiveBarContainer.AbsoluteSize.Y <= 0 or targetBtn.AbsoluteSize.Y <= 0 then return end
 
-	local MAX_DEFER   = 8
-	local deferCount  = 0
+	local containerTop = ActiveBarContainer.AbsolutePosition.Y
+	local targetTop = targetBtn.AbsolutePosition.Y
+	local targetYPos = targetTop - containerTop
+	local targetHeight = targetBtn.AbsoluteSize.Y
 
-	local function aplicar()
-		if not targetBtn or not targetBtn.Parent then return end
-		deferCount = deferCount + 1
+	if activeBarTween then activeBarTween:Cancel() end
+	local targetPosition = UDim2.fromOffset(7, math.floor(targetYPos))
+	local targetSize = UDim2.new(0, 3, 0, math.max(12, math.floor(targetHeight - 8)))
 
-		local btnAbsSize = targetBtn.AbsoluteSize.Y
-		local btnAbsPos  = targetBtn.AbsolutePosition.Y
-		local panelAbsY  = ActiveBarContainer.AbsolutePosition.Y -- Agora pegando a posição relativa ao Container!
-
-		if (btnAbsSize == 0 or btnAbsPos == 0 or panelAbsY == 0) and deferCount < MAX_DEFER then
-			task.defer(aplicar)
-			return
-		end
-
-		local targetCenterY = btnAbsPos + (btnAbsSize / 2)
-		local targetYPos    = targetCenterY - panelAbsY
-
-		if animar then
-			TweenService:Create(sharedActiveBar, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-				Position = UDim2.new(0, 7, 0, targetYPos)
-			}):Play()
-		else
-			sharedActiveBar.Position = UDim2.new(0, 7, 0, targetYPos)
-		end
+	if animar then
+		activeBarTween = TweenService:Create(sharedActiveBar, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+			Position = targetPosition,
+			Size = targetSize
+		})
+		activeBarTween:Play()
+	else
+		sharedActiveBar.Position = targetPosition
+		sharedActiveBar.Size = targetSize
 	end
-
-	task.defer(aplicar)
 end
 
+-- A barra acompanha o CanvasPosition e também mudanças de tamanho/posição.
 TabsContainer:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
 	UpdateActiveBarPosition(false)
+end)
+TabsContainer:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+	task.defer(function() UpdateActiveBarPosition(false) end)
 end)
 
 -- ==================== SELECIONAR ABA ====================
 local function selectTab(tabName)
+	if not tabButtons[tabName] then return end
 	activeTab = tabName
-	local targetBtn = tabButtons[tabName]
 
 	for name, btn in pairs(tabButtons) do
-		local label          = btn:FindFirstChild("Label")
-		local iconContainer  = btn:FindFirstChild("Icon")
-		local animSpeed      = TweenInfo.new(0.3, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out)
+		local label = btn:FindFirstChild("Label")
+		local iconContainer = btn:FindFirstChild("Icon")
+		local animSpeed = TweenInfo.new(0.3, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out)
 
 		if name == tabName then
 			TweenService:Create(btn, animSpeed, {BackgroundColor3 = Color3.fromRGB(45, 10, 15), BackgroundTransparency = 0.5}):Play()
@@ -1502,25 +1604,22 @@ local function selectTab(tabName)
 			if iconContainer and iconContainer:FindFirstChild("AccentImage") then
 				TweenService:Create(iconContainer.AccentImage, animSpeed, {ImageColor3 = Color3.fromRGB(255, 255, 255)}):Play()
 			end
-			originalTrans[btn] = { BackgroundTransparency = 0.5, TextTransparency = 0 }
+			originalTrans[btn] = {BackgroundTransparency = 0.5, TextTransparency = 0}
 		else
 			TweenService:Create(btn, animSpeed, {BackgroundColor3 = Color3.fromRGB(15, 15, 15), BackgroundTransparency = 1}):Play()
 			if label then TweenService:Create(label, animSpeed, {TextColor3 = Color3.fromRGB(150, 150, 150)}):Play() end
 			if iconContainer and iconContainer:FindFirstChild("AccentImage") then
 				TweenService:Create(iconContainer.AccentImage, animSpeed, {ImageColor3 = Color3.fromRGB(150, 150, 150)}):Play()
 			end
-			originalTrans[btn] = { BackgroundTransparency = 1, TextTransparency = 0 }
+			originalTrans[btn] = {BackgroundTransparency = 1, TextTransparency = 0}
 		end
 	end
 
-	if targetBtn then
-		sharedActiveBar.Visible = true
-		UpdateActiveBarPosition(true)
-	end
-
-	togglesContainer.CanvasPosition = Vector2.new(0, 0)
+	TabsContainer.CanvasPosition = Vector2.new(0, 0)
 	searchTextBox.Text = ""
-	filterToggles(tabName, "")
+	filterToggles(tabName, "", true)
+	sharedActiveBar.Visible = true
+	task.defer(function() UpdateActiveBarPosition(true) end)
 end
 
 -- ==================== CRIAR BOTÃO DE ABA ====================
@@ -1638,11 +1737,12 @@ local function createToggle(parent, configKey, tabCategory)
 		Configs[configKey] = not Configs[configKey]
 		local targetPos   = Configs[configKey] and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)
 		local targetColor = Configs[configKey] and Color3.fromHex("#8B0000") or Color3.fromRGB(30, 30, 30)
-		local anim        = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		local anim        = TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 		TweenService:Create(switchCircle, anim, {Position = targetPos}):Play()
 		TweenService:Create(switchTrack,  anim, {BackgroundColor3 = targetColor}):Play()
+		-- Micro-interação sem alterar a altura do card, evitando "pulos" no UIListLayout.
 		toggleScale.Scale = 0.96
-		TweenService:Create(toggleScale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
+		TweenService:Create(toggleScale, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
 
 		-- ==================== INTEGRAÇÃO COM BACKEND ====================
 		if _G.AkatCallbacks and type(_G.AkatCallbacks[configKey]) == "function" then
@@ -1669,56 +1769,111 @@ searchTextBox:GetPropertyChangedSignal("Text"):Connect(function()
 	end)
 end)
 
--- ==================== EXPAND ====================
+-- ==================== EXPAND / RESPONSIVIDADE ====================
+local function KeepWindowInsideViewport()
+	local vp = GetViewportSize()
+	local size = mainWrapper.AbsoluteSize
+	local halfW, halfH = size.X / 2, size.Y / 2
+	local pos = mainWrapper.AbsolutePosition + Vector2.new(halfW, halfH)
+	local x = math.clamp(pos.X, halfW + 2, vp.X - halfW - 2)
+	local y = math.clamp(pos.Y, halfH + 2, vp.Y - halfH - 2)
+	mainWrapper.Position = UDim2.fromOffset(x, y)
+end
+
+local function AnimateWindowSize(size, duration)
+	if activeWindowTween then activeWindowTween:Cancel() end
+	activeWindowTween = TweenService:Create(mainWrapper, TweenInfo.new(duration or 0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = size})
+	activeWindowTween:Play()
+	activeWindowTween.Completed:Connect(function()
+		if activeWindowTween then activeWindowTween = nil end
+		ApplyResponsiveLayout()
+		KeepWindowInsideViewport()
+	end)
+	return activeWindowTween
+end
+
 ExpandBtn.MouseButton1Click:Connect(function()
 	PlayUI_Click()
 	if UIState ~= "OPEN" then return end
 	isExpanded = not isExpanded
-	local newSize = isExpanded and UDim2.new(0, 800, 0, 480) or UDim2.new(0, 640, 0, 360)
-	TweenService:Create(mainWrapper, TweenInfo.new(0.3, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), {Size = newSize}):Play()
+	AnimateWindowSize(GetWindowSize(isExpanded), 0.32)
 end)
 
 -- ==================== MÁQUINA DE ESTADOS DA UI ====================
 local isTransitioning = false
 
 SetUIState = function(newState)
-	if UIState == newState then return end
-	if isTransitioning then return end
+	if newState ~= "OPEN" and newState ~= "MINIMIZED" and newState ~= "CLOSED" then return end
+	if isConfirmOpen and newState ~= "OPEN" then return end
+	if UIState == newState and not isTransitioning then return end
+
+	stateToken += 1
+	local myToken = stateToken
 	isTransitioning = true
 
-	local tempoAnim  = 0.25
+	if activeWindowTween then activeWindowTween:Cancel(); activeWindowTween = nil end
+
+	local tempoAnim = 0.25
 	local windowAnim = TweenInfo.new(tempoAnim, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
 	if newState == "OPEN" then
 		mainWrapper.Visible = true
-		mainWrapper.Size    = UDim2.new(0, 480, 0, 260)
+		FloatBtn.Visible = false
+		local targetSize = GetWindowSize(isExpanded)
+		mainWrapper.Size = UDim2.fromOffset(math.max(300, targetSize.X.Offset - 120), math.max(220, targetSize.Y.Offset - 80))
 		AplicarFadeSincronizado(mainWrapper, true, 0)
 		AplicarFadeSincronizado(mainWrapper, false, tempoAnim)
 
-		local targetSize = isExpanded and UDim2.new(0, 800, 0, 480) or UDim2.new(0, 640, 0, 360)
-		local openTween  = TweenService:Create(mainWrapper, windowAnim, {Size = targetSize})
-		openTween:Play()
-		openTween.Completed:Connect(function()
-			UIState         = "OPEN"
+		local tween = TweenService:Create(mainWrapper, windowAnim, {Size = targetSize})
+		activeWindowTween = tween
+		tween:Play()
+		tween.Completed:Connect(function()
+			if myToken ~= stateToken or not mainWrapper.Parent then return end
+			activeWindowTween = nil
+			UIState = "OPEN"
 			isTransitioning = false
+			ApplyResponsiveLayout()
+			KeepWindowInsideViewport()
 			selectTab(activeTab)
-			filterToggles(activeTab, searchTextBox.Text)
-			UpdateActiveBarPosition(false)
 		end)
 
 	elseif newState == "MINIMIZED" or newState == "CLOSED" then
-		AplicarFadeSincronizado(mainWrapper, true, tempoAnim)
-		local closeTween = TweenService:Create(mainWrapper, windowAnim, {Size = UDim2.new(0, 480, 0, 260)})
-		closeTween:Play()
-		closeTween.Completed:Connect(function()
+		local fadeDuration = newState == "CLOSED" and 0.22 or tempoAnim
+		AplicarFadeSincronizado(mainWrapper, true, fadeDuration)
+		local tween = TweenService:Create(mainWrapper, TweenInfo.new(fadeDuration, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {Size = UDim2.fromOffset(420, 260)})
+		activeWindowTween = tween
+		tween:Play()
+		tween.Completed:Connect(function()
+			if myToken ~= stateToken or not mainWrapper.Parent then return end
+			activeWindowTween = nil
 			mainWrapper.Visible = false
-			UIState             = newState
-			isTransitioning     = false
+			UIState = newState
+			isTransitioning = false
+			FloatBtn.Visible = true
 		end)
-	else
-		isTransitioning = false
 	end
 end
+
+-- Atualiza a geometria quando a tela muda (rotação / resize / teclado).
+local function ConnectViewportWatcher()
+	if viewportConn then viewportConn:Disconnect() end
+	local camera = workspace.CurrentCamera
+	if not camera then return end
+	viewportConn = camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+		if not mainWrapper.Parent then return end
+		if UIState == "OPEN" then
+			local target = GetWindowSize(isExpanded)
+			mainWrapper.Size = target
+			ApplyResponsiveLayout()
+			KeepWindowInsideViewport()
+		elseif UIState == "MINIMIZED" then
+			KeepWindowInsideViewport()
+		end
+	end)
+end
+
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(ConnectViewportWatcher)
+ConnectViewportWatcher()
 
 -- ==================== FLASH DE CLIQUE NOS BOTÕES DO TOPO ====================
 local function AplicarClickFlash(btn, icon)
@@ -1900,6 +2055,9 @@ local function ExecutarIntroAkat()
 	FloatBtn.Visible    = true
 	UIState             = "OPEN"
 	isTransitioning     = false
+	mainWrapper.Size     = GetWindowSize(isExpanded)
+	ApplyResponsiveLayout()
+	KeepWindowInsideViewport()
 
 	local MainScale     = Instance.new("UIScale", mainWrapper)
 	MainScale.Scale     = 0.85
