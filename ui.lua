@@ -63,8 +63,8 @@ local isConfirmOpen = false
 
 -- ==================== DIMENSIONAMENTO RESPONSIVO ====================
 -- Mantém os tamanhos originais no PC e limita a janela em telas pequenas.
-local NORMAL_UI_SIZE   = Vector2.new(640, 360)
-local EXPANDED_UI_SIZE = Vector2.new(800, 480)
+local NORMAL_UI_SIZE   = Vector2.new(580, 330)
+local EXPANDED_UI_SIZE = Vector2.new(720, 405)
 local UI_SAFE_MARGIN   = 14
 
 local function GetViewportSize()
