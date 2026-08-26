@@ -53,6 +53,7 @@ local UI_TEXT = {
 		KillAll     = { Title = "Kill All",        Desc = "Eliminates all players at once (if you are the Killer)." },
 		Invisibility= { Title = "Invisibility",    Desc = "Makes your character invisible to other players." }
 	}
+}
 
 local activeTab     = "Player"
 local tabButtons    = {}
