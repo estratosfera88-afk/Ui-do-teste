@@ -431,7 +431,7 @@ local function ApplyResponsiveLayout()
 
 	if TabsContainer then
 		TabsContainer.Size = UDim2.new(1, -8, 1, -152)
-	\end
+	end
 
 	pcall(function() UpdateCanvasSize() end)
 	pcall(function() UpdateActiveBarPosition(false) end)
