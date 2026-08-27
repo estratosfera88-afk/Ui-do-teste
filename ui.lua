@@ -9,10 +9,15 @@ local ContentProvider = game:GetService("ContentProvider")
 
 local player = Players.LocalPlayer
 
+-- Limpa uma instância anterior da UI para evitar conexões e objetos duplicados.
+if _G.AkatUIShutdown then
+	pcall(_G.AkatUIShutdown)
+end
+
 -- ==================== ESTADO DOS TOGGLES DA UI ====================
 local Configs = {
 	ESP         = false,
-	Aimbot      = false,
+	AutoShoot   = false,
 	Speed       = false,
 	Reach       = false,
 	AntiFling   = false,
@@ -38,7 +43,7 @@ local UI_TEXT = {
 	Intro             = '<font color="#FFFFFF">Scripts by | </font><font color="#8B0000">AKATSUKI</font>',
 	Tabs              = { Player = "Player", Combat = "Combat", Visuals = "Visuals", Teleports = "Teleports", Settings = "Settings" },
 		Options           = {
-		Aimbot      = { Title = "Aimbot Murderer",  Desc = "Automatic aimbot that stays in the murderer's head non-stop." },
+		AutoShoot   = { Title = "Auto Shoot",     Desc = "Automatically equips the Gun and fires at the detected Murderer using Silent Aim." },
 		Reach       = { Title = "Knife Reach",       Desc = "Significantly increases your knife attack reach (18 studs)." },
 		ESP         = { Title = "Player ESP",        Desc = "Highlights players through walls (Sheriff Blue / Hero Yellow)." },
 		Speed       = { Title = "WalkSpeed",         Desc = "Slightly increases player walkspeed up to 23 smoothly." },
@@ -330,6 +335,362 @@ UserInputService.InputEnded:Connect(function(input)
 		dragUIInput  = nil
 	end
 end)
+
+
+-- ==================== FLOATING ACTION BUTTONS ====================
+local floatingButtons = {}
+local floatingDragState = nil
+local floatingGradientRotation = 0
+
+local FLOATING_BUTTON_SIZE = Vector2.new(150, 48)
+local FLOATING_GAP = 18
+
+local function GetFloatingInitialPosition(side)
+    local vp = GetViewportSize()
+    local mainPos = mainWrapper.AbsolutePosition
+    local mainSize = mainWrapper.AbsoluteSize
+
+    if mainSize.X <= 0 or mainSize.Y <= 0 then
+        mainPos = Vector2.new(vp.X * 0.5 - 320, vp.Y * 0.5 - 180)
+        mainSize = Vector2.new(640, 360)
+    end
+
+    local halfW = FLOATING_BUTTON_SIZE.X * 0.5
+    local halfH = FLOATING_BUTTON_SIZE.Y * 0.5
+    local centerY = mainPos.Y + mainSize.Y * 0.5
+
+    local centerX
+    if side == "right" then
+        centerX = mainPos.X + mainSize.X + FLOATING_GAP + halfW
+    else
+        centerX = mainPos.X - FLOATING_GAP - halfW
+    end
+
+    centerX = math.clamp(centerX, halfW + UI_SAFE_MARGIN, vp.X - halfW - UI_SAFE_MARGIN)
+    centerY = math.clamp(centerY, halfH + UI_SAFE_MARGIN, vp.Y - halfH - UI_SAFE_MARGIN)
+
+    return UDim2.fromOffset(centerX, centerY)
+end
+
+local function SetFloatingButtonPosition(button, position)
+    if button and button.Parent then
+        button.Position = position
+    end
+end
+
+local function SetupFloatingDrag(inputObject, root)
+    inputObject.Active = true
+
+    inputObject.InputBegan:Connect(function(input)
+        local isPointer = input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch
+
+        if not isPointer or floatingDragState then return end
+
+        floatingDragState = {
+            root = root,
+            input = input,
+            inputType = input.UserInputType,
+            startInputPosition = input.Position,
+            startButtonPosition = root.Position,
+            dragging = false,
+        }
+    end)
+end
+
+UserInputService.InputChanged:Connect(function(input)
+    local state = floatingDragState
+    if not state or not state.root or not state.root.Parent then
+        return
+    end
+
+    local shouldMove = false
+    if state.inputType == Enum.UserInputType.MouseButton1 then
+        shouldMove = input.UserInputType == Enum.UserInputType.MouseMovement
+    else
+        shouldMove = input == state.input
+    end
+
+    if not shouldMove then return end
+
+    local delta = input.Position - state.startInputPosition
+    if delta.Magnitude > 5 then
+        state.dragging = true
+    end
+
+    local vp = GetViewportSize()
+    local halfW = FLOATING_BUTTON_SIZE.X * 0.5
+    local halfH = FLOATING_BUTTON_SIZE.Y * 0.5
+
+    local startX = state.startButtonPosition.X.Offset
+        + vp.X * state.startButtonPosition.X.Scale
+    local startY = state.startButtonPosition.Y.Offset
+        + vp.Y * state.startButtonPosition.Y.Scale
+
+    local newX = math.clamp(
+        startX + delta.X,
+        halfW + UI_SAFE_MARGIN,
+        vp.X - halfW - UI_SAFE_MARGIN
+    )
+    local newY = math.clamp(
+        startY + delta.Y,
+        halfH + UI_SAFE_MARGIN,
+        vp.Y - halfH - UI_SAFE_MARGIN
+    )
+
+    SetFloatingButtonPosition(state.root, UDim2.fromOffset(newX, newY))
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    local state = floatingDragState
+    if not state then return end
+
+    local isRelease = input == state.input
+        or input.UserInputType == state.inputType
+
+    if not isRelease then return end
+
+    local root = state.root
+    local wasDragging = state.dragging
+    local buttonKey = root and root:GetAttribute("FloatingButtonKey")
+
+    floatingDragState = nil
+
+    if not wasDragging and root and root.Parent then
+        local action = floatingButtons[buttonKey]
+        if action and action.callback then
+            action.callback()
+        end
+    end
+end)
+
+local floatingGradientConnection
+floatingGradientConnection = RunService.RenderStepped:Connect(function(dt)
+    floatingGradientRotation = (floatingGradientRotation + dt * 55) % 360
+
+    for _, data in pairs(floatingButtons) do
+        if data and data.gradient and data.root and data.root.Parent then
+            data.gradient.Rotation = floatingGradientRotation
+        end
+    end
+end)
+
+function CreateFloatingButton(buttonKey, text, side, callback)
+    local existing = floatingButtons[buttonKey]
+    if existing and existing.root and existing.root.Parent then
+        if existing.destroyTween then
+            pcall(function() existing.destroyTween:Cancel() end)
+            existing.destroyTween = nil
+        end
+        existing.destroying = false
+        existing.callback = callback
+        existing.root.Visible = true
+
+        TweenService:Create(
+            existing.root,
+            TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {GroupTransparency = 0}
+        ):Play()
+
+        if existing.scale then
+            TweenService:Create(
+                existing.scale,
+                TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                {Scale = 1}
+            ):Play()
+        end
+
+        return existing.root
+    end
+
+    floatingButtons[buttonKey] = nil
+
+    local root = Instance.new("CanvasGroup")
+    root.Name = buttonKey .. "Button"
+    root:SetAttribute("FloatingButtonKey", buttonKey)
+    root.AnchorPoint = Vector2.new(0.5, 0.5)
+    root.Size = UDim2.fromOffset(FLOATING_BUTTON_SIZE.X, FLOATING_BUTTON_SIZE.Y)
+    root.Position = GetFloatingInitialPosition(side)
+    root.BackgroundTransparency = 1
+    root.GroupTransparency = 1
+    root.ZIndex = 120
+    root.Parent = screenGui
+
+    local button = Instance.new("TextButton")
+    button.Name = "Action"
+    button.Size = UDim2.fromScale(1, 1)
+    button.BackgroundColor3 = Color3.fromRGB(18, 2, 4)
+    button.BackgroundTransparency = 0.18
+    button.BorderSizePixel = 0
+    button.AutoButtonColor = false
+    button.Text = text
+    button.TextColor3 = Color3.fromRGB(245, 245, 245)
+    button.TextSize = 17
+    button.Font = Enum.Font.GothamBold
+    button.ZIndex = 121
+    button.Parent = root
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 14)
+    corner.Parent = button
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Name = "GradientBorder"
+    stroke.Thickness = 1.6
+    stroke.Transparency = 0
+    stroke.Color = Color3.fromRGB(255, 255, 255)
+    stroke.Parent = button
+
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 35, 45)),
+        ColorSequenceKeypoint.new(0.45, Color3.fromRGB(130, 0, 12)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(55, 0, 5)),
+    })
+    gradient.Rotation = floatingGradientRotation
+    gradient.Parent = stroke
+
+    local innerStroke = Instance.new("UIStroke")
+    innerStroke.Thickness = 0.7
+    innerStroke.Transparency = 0.78
+    innerStroke.Color = Color3.fromRGB(255, 90, 90)
+    innerStroke.Parent = button
+
+    local scale = Instance.new("UIScale")
+    scale.Scale = 0.88
+    scale.Parent = root
+
+    floatingButtons[buttonKey] = {
+        root = root,
+        gradient = gradient,
+        callback = callback,
+        scale = scale,
+        destroying = false,
+        destroyTween = nil,
+    }
+
+    SetupFloatingDrag(button, root)
+
+    TweenService:Create(
+        root,
+        TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {GroupTransparency = 0}
+    ):Play()
+
+    TweenService:Create(
+        scale,
+        TweenInfo.new(0.38, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+        {Scale = 1}
+    ):Play()
+
+    return root
+end
+
+function DestroyFloatingButton(buttonKey)
+    local data = floatingButtons[buttonKey]
+    if not data or data.destroying then return end
+
+    local root = data.root
+    if not root or not root.Parent then
+        floatingButtons[buttonKey] = nil
+        return
+    end
+
+    data.destroying = true
+
+    if floatingDragState and floatingDragState.root == root then
+        floatingDragState = nil
+    end
+
+    local scale = data.scale
+    local fade = TweenService:Create(
+        root,
+        TweenInfo.new(0.20, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        {GroupTransparency = 1}
+    )
+    local shrink = scale and TweenService:Create(
+        scale,
+        TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        {Scale = 0.88}
+    )
+
+    data.destroyTween = fade
+    fade:Play()
+    if shrink then shrink:Play() end
+
+    fade.Completed:Connect(function()
+        if floatingButtons[buttonKey] ~= data then return end
+
+        floatingButtons[buttonKey] = nil
+        if root and root.Parent then
+            root:Destroy()
+        end
+    end)
+end
+
+local function SyncFloatingButton(configKey)
+    if configKey == "AutoShoot" then
+        if Configs[configKey] then
+            CreateFloatingButton(
+                "AutoShoot",
+                "AUTO SHOOT",
+                "right",
+                function()
+                    if _G.AkatCallbacks and type(_G.AkatCallbacks.AutoShootOnce) == "function" then
+                        _G.AkatCallbacks.AutoShootOnce()
+                    end
+                end
+            )
+        else
+            DestroyFloatingButton("AutoShoot")
+        end
+    elseif configKey == "KnifeThrow" then
+        if Configs[configKey] then
+            CreateFloatingButton(
+                "KnifeThrow",
+                "KNIFE THROW",
+                "left",
+                function()
+                    if _G.AkatCallbacks and type(_G.AkatCallbacks.KnifeThrowOnce) == "function" then
+                        _G.AkatCallbacks.KnifeThrowOnce()
+                    end
+                end
+            )
+        else
+            DestroyFloatingButton("KnifeThrow")
+        end
+    end
+end
+
+_G.AkatUIShutdown = function()
+    if floatingDragState then
+        floatingDragState = nil
+    end
+
+    if floatingGradientConnection then
+        pcall(function()
+            floatingGradientConnection:Disconnect()
+        end)
+        floatingGradientConnection = nil
+    end
+
+    for key, data in pairs(floatingButtons) do
+        if data and data.root then
+            pcall(function()
+                if data.root.Parent then
+                    data.root:Destroy()
+                end
+            end)
+        end
+        floatingButtons[key] = nil
+    end
+
+    pcall(function()
+        if screenGui and screenGui.Parent then
+            screenGui:Destroy()
+        end
+    end)
+end
 
 -- ==================== ESTRUTURA UNIFICADA DA JANELA ====================
 local Shadow               = Instance.new("ImageLabel", mainFrame)
@@ -1760,6 +2121,7 @@ local function createToggle(parent, configKey, tabCategory)
 			warn("[AKAT UI] Callback not found: " .. tostring(configKey))
 		end
 		-- ==================== FIM DA INTEGRAÇÃO ====================
+		SyncFloatingButton(configKey)
 	end)
 end
 
@@ -1943,7 +2305,9 @@ btnYes.MouseButton1Click:Connect(function()
 	AplicarFadeSincronizado(confirmCard, true, syncTime)
 	task.wait(syncTime)
 	pcall(function() confirmBlur:Destroy() end)
-	screenGui:Destroy()
+	if _G.AkatUIShutdown then
+		pcall(_G.AkatUIShutdown)
+	end
 end)
 
 -- ==================== HOVER NOS BOTÕES DO TOPO ====================
@@ -1997,7 +2361,7 @@ createToggle(togglesContainer, "Speed",        "Player")
 createToggle(togglesContainer, "AntiFling",    "Player")
 createToggle(togglesContainer, "Invisibility", "Player")
 
-createToggle(togglesContainer, "Aimbot",       "Combat")
+createToggle(togglesContainer, "AutoShoot",    "Combat")
 createToggle(togglesContainer, "Reach",        "Combat")
 createToggle(togglesContainer, "KnifeThrow",   "Combat")
 createToggle(togglesContainer, "KillAll",      "Combat")
