@@ -201,7 +201,7 @@ local FloatBtn = Instance.new("ImageButton", screenGui)
 FloatBtn.Name                = "FloatBtn"
 FloatBtn.AnchorPoint         = Vector2.new(0.5, 0.5)
 FloatBtn.Size                = UDim2.new(0, 44, 0, 44)
-FloatBtn.Position            = UDim2.new(0.12, 0, 0.4, 0)
+FloatBtn.Position         = UDim2.new(0.06, 0, 0.2, 0)
 FloatBtn.Image               = "rbxthumb://type=Asset&id=139044062702391&w=150&h=150"
 FloatBtn.BackgroundColor3    = Color3.fromRGB(15, 0, 0)
 FloatBtn.Visible             = false
