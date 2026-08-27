@@ -27,7 +27,6 @@ local Configs = {
 	ChatRoles   = false,
 	KnifeThrow  = false,
 	XRay        = false,
-	AutoDodge   = false,
 	KillAll     = false,
 	Invisibility= false
 }
@@ -54,7 +53,6 @@ local UI_TEXT = {
 		ChatRoles   = { Title = "Reveal Roles",      Desc = "Sends a message in chat revealing active roles." },
 		KnifeThrow  = { Title = "Knife Throw",     Desc = "Automatically throws the knife with precision." },
 		XRay        = { Title = "X-Ray",           Desc = "Full vision through objects and terrain." },
-		AutoDodge   = { Title = "Auto Dodge Knife", Desc = "Automatically dodges thrown knives (Tween/Teleport)." },
 		KillAll     = { Title = "Kill All",        Desc = "Eliminates all players at once (if you are the Killer)." },
 		Invisibility= { Title = "Invisibility",    Desc = "Makes your character invisible to other players." }
 	}
@@ -340,7 +338,6 @@ end)
 -- ==================== FLOATING ACTION BUTTONS ====================
 local floatingButtons = {}
 local floatingDragState = nil
-local floatingGradientRotation = 0
 
 local FLOATING_BUTTON_SIZE = Vector2.new(150, 48)
 local FLOATING_GAP = 18
@@ -379,13 +376,13 @@ local function SetFloatingButtonPosition(button, position)
 end
 
 local function SetupFloatingDrag(inputObject, root)
-    inputObject.Active = true
+    -- Mouse drag only. Touch is handled globally below so the floating action
+    -- button does not capture/sink the mobile thumbstick touch.
+    inputObject.Active = false
 
     inputObject.InputBegan:Connect(function(input)
-        local isPointer = input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch
-
-        if not isPointer or floatingDragState then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+        if floatingDragState then return end
 
         floatingDragState = {
             root = root,
@@ -397,6 +394,29 @@ local function SetupFloatingDrag(inputObject, root)
         }
     end)
 end
+
+-- Mobile touch activation is detected without making the action button Active,
+-- so the movement thumbstick keeps receiving its own touch stream.
+UserInputService.TouchEnded:Connect(function(touch)
+    local position = touch.Position
+
+    for _, data in pairs(floatingButtons) do
+        local root = data and data.root
+        if root and root.Parent and root.Visible and not data.destroying then
+            local absPos = root.AbsolutePosition
+            local absSize = root.AbsoluteSize
+            local inside = position.X >= absPos.X
+                and position.X <= absPos.X + absSize.X
+                and position.Y >= absPos.Y
+                and position.Y <= absPos.Y + absSize.Y
+
+            if inside and data.callback then
+                task.spawn(data.callback)
+                break
+            end
+        end
+    end
+end)
 
 UserInputService.InputChanged:Connect(function(input)
     local state = floatingDragState
@@ -444,11 +464,8 @@ end)
 UserInputService.InputEnded:Connect(function(input)
     local state = floatingDragState
     if not state then return end
-
-    local isRelease = input == state.input
-        or input.UserInputType == state.inputType
-
-    if not isRelease then return end
+    if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+    if input ~= state.input then return end
 
     local root = state.root
     local wasDragging = state.dragging
@@ -459,18 +476,7 @@ UserInputService.InputEnded:Connect(function(input)
     if not wasDragging and root and root.Parent then
         local action = floatingButtons[buttonKey]
         if action and action.callback then
-            action.callback()
-        end
-    end
-end)
-
-local floatingGradientConnection
-floatingGradientConnection = RunService.RenderStepped:Connect(function(dt)
-    floatingGradientRotation = (floatingGradientRotation + dt * 55) % 360
-
-    for _, data in pairs(floatingButtons) do
-        if data and data.gradient and data.root and data.root.Parent then
-            data.gradient.Rotation = floatingGradientRotation
+            task.spawn(action.callback)
         end
     end
 end)
@@ -534,11 +540,15 @@ function CreateFloatingButton(buttonKey, text, side, callback)
     corner.CornerRadius = UDim.new(0, 14)
     corner.Parent = button
 
+    -- Texto sempre branco; nenhum UIGradient é aplicado ao texto.
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+    -- O gradiente fica exclusivamente no contorno do botão.
     local stroke = Instance.new("UIStroke")
     stroke.Name = "GradientBorder"
-    stroke.Thickness = 1.6
+    stroke.Thickness = 1.8
     stroke.Transparency = 0
-    stroke.Color = Color3.fromRGB(255, 255, 255)
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     stroke.Parent = button
 
     local gradient = Instance.new("UIGradient")
@@ -547,7 +557,7 @@ function CreateFloatingButton(buttonKey, text, side, callback)
         ColorSequenceKeypoint.new(0.45, Color3.fromRGB(130, 0, 12)),
         ColorSequenceKeypoint.new(1, Color3.fromRGB(55, 0, 5)),
     })
-    gradient.Rotation = floatingGradientRotation
+    gradient.Rotation = 45
     gradient.Parent = stroke
 
     local innerStroke = Instance.new("UIStroke")
@@ -665,13 +675,6 @@ end
 _G.AkatUIShutdown = function()
     if floatingDragState then
         floatingDragState = nil
-    end
-
-    if floatingGradientConnection then
-        pcall(function()
-            floatingGradientConnection:Disconnect()
-        end)
-        floatingGradientConnection = nil
     end
 
     for key, data in pairs(floatingButtons) do
@@ -2371,7 +2374,6 @@ createToggle(togglesContainer, "XRay",         "Visuals")
 
 createToggle(togglesContainer, "TpToGun",      "Teleports")
 createToggle(togglesContainer, "SafeSpot",     "Teleports")
-createToggle(togglesContainer, "AutoDodge",    "Teleports")
 
 createToggle(togglesContainer, "AutoCollect",  "Settings")
 createToggle(togglesContainer, "ChatRoles",    "Settings")
