@@ -1,4 +1,4 @@
--- [[ AKATSUKI UI ONLY [v5.7.2] - REFINED UNIFIED EDITION — FIXED BUILD ]]
+-- [[ AKATSUKI UI ONLY [v5.8 - PLAYER SLIDERS / FLOATING SAFE AREA] - REFINED UNIFIED EDITION — FIXED BUILD ]]
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -19,11 +19,14 @@ local Configs = {
 	ESP         = false,
 	AutoShoot   = false,
 	Speed       = false,
+	SpeedValue  = 16,
+	JumpPower   = false,
+	JumpPowerValue = 50,
 	Reach       = false,
 	AntiFling   = false,
 	TpToGun     = false,
 	SafeSpot    = false,
-	AutoCollect = false,
+	AutoFarm    = false,
 	ChatRoles   = false,
 	KnifeThrow  = false,
 	XRay        = false,
@@ -45,11 +48,12 @@ local UI_TEXT = {
 		AutoShoot   = { Title = "Auto Shoot",     Desc = "Automatically equips the Gun and fires at the detected Murderer using Silent Aim." },
 		Reach       = { Title = "Knife Reach",       Desc = "Significantly increases your knife attack reach (18 studs)." },
 		ESP         = { Title = "Player ESP",        Desc = "Highlights players through walls (Sheriff Blue / Hero Yellow)." },
-		Speed       = { Title = "WalkSpeed",         Desc = "Slightly increases player walkspeed up to 23 smoothly." },
+		Speed       = { Title = "Walkspeed",         Desc = "Adjusts your movement speed with a continuous numeric slider." },
+		JumpPower  = { Title = "Jump Power",        Desc = "Adjusts your jump power with a continuous numeric slider." },
 		AntiFling   = { Title = "Anti-Fling",        Desc = "Disables collisions to prevent other players from flinging you." },
 		TpToGun     = { Title = "TP to Gun",         Desc = "Teleports to dropped gun (Automatically disabled for the Murderer)." },
 		SafeSpot    = { Title = "Safe Spot",         Desc = "Teleports you to an invisible sky platform to remain completely safe." },
-		AutoCollect = { Title = "Auto Collect",      Desc = "Smoothly collects coins continuously without clunky visual stops." },
+		AutoFarm    = { Title = "Auto Farm",          Desc = "Smoothly collects coins continuously without clunky visual stops." },
 		ChatRoles   = { Title = "Reveal Roles",      Desc = "Sends a message in chat revealing active roles." },
 		KnifeThrow  = { Title = "Knife Throw",     Desc = "Automatically throws the knife with precision." },
 		XRay        = { Title = "X-Ray",           Desc = "Full vision through objects and terrain." },
@@ -76,6 +80,23 @@ local function GetViewportSize()
 		return camera.ViewportSize
 	end
 	return Vector2.new(1280, 720)
+end
+
+-- Mantém os botões flutuantes fora da área do thumbstick móvel.
+local function ClampFloatingPosition(pos)
+	local vp = GetViewportSize()
+	local halfW, halfH = FLOATING_BUTTON_SIZE.X / 2, FLOATING_BUTTON_SIZE.Y / 2
+	local minX = halfW + 8
+	local maxX = vp.X - halfW - 8
+	local minY = halfH + 8
+	local maxY = vp.Y - halfH - 8
+
+	-- Zona reservada para o analógico virtual no canto inferior esquerdo.
+	if pos.X < 210 and pos.Y > vp.Y - 210 then
+		pos = Vector2.new(220, math.min(pos.Y, vp.Y - 230))
+	end
+
+	return Vector2.new(math.clamp(pos.X, minX, maxX), math.clamp(pos.Y, minY, maxY))
 end
 
 local function GetResponsiveUISizes()
@@ -342,6 +363,20 @@ local floatingDragState = nil
 local FLOATING_BUTTON_SIZE = Vector2.new(150, 48)
 local FLOATING_GAP = 18
 
+-- Reserva uma área para o thumbstick móvel no canto inferior esquerdo.
+local function ClampFloatingToSafeArea(position)
+    local vp = GetViewportSize()
+    local halfW = FLOATING_BUTTON_SIZE.X * 0.5
+    local halfH = FLOATING_BUTTON_SIZE.Y * 0.5
+    local x = math.clamp(position.X, halfW + UI_SAFE_MARGIN, vp.X - halfW - UI_SAFE_MARGIN)
+    local y = math.clamp(position.Y, halfH + UI_SAFE_MARGIN, vp.Y - halfH - UI_SAFE_MARGIN)
+    if x < 230 and y > vp.Y - 220 then
+        x = 230
+        y = math.min(y, vp.Y - 230)
+    end
+    return Vector2.new(x, y)
+end
+
 local function GetFloatingInitialPosition(side)
     local vp = GetViewportSize()
     local mainPos = mainWrapper.AbsolutePosition
@@ -363,10 +398,8 @@ local function GetFloatingInitialPosition(side)
         centerX = mainPos.X - FLOATING_GAP - halfW
     end
 
-    centerX = math.clamp(centerX, halfW + UI_SAFE_MARGIN, vp.X - halfW - UI_SAFE_MARGIN)
-    centerY = math.clamp(centerY, halfH + UI_SAFE_MARGIN, vp.Y - halfH - UI_SAFE_MARGIN)
-
-    return UDim2.fromOffset(centerX, centerY)
+    local safePosition = ClampFloatingToSafeArea(Vector2.new(centerX, centerY))
+    return UDim2.fromOffset(safePosition.X, safePosition.Y)
 end
 
 local function SetFloatingButtonPosition(button, position)
@@ -376,12 +409,13 @@ local function SetFloatingButtonPosition(button, position)
 end
 
 local function SetupFloatingDrag(inputObject, root)
-    -- Mouse drag only. Touch is handled globally below so the floating action
-    -- button does not capture/sink the mobile thumbstick touch.
-    inputObject.Active = false
+    inputObject.Active = true
 
     inputObject.InputBegan:Connect(function(input)
-        if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1
+            and input.UserInputType ~= Enum.UserInputType.Touch then
+            return
+        end
         if floatingDragState then return end
 
         floatingDragState = {
@@ -395,89 +429,40 @@ local function SetupFloatingDrag(inputObject, root)
     end)
 end
 
--- Mobile touch activation is detected without making the action button Active,
--- so the movement thumbstick keeps receiving its own touch stream.
-UserInputService.TouchEnded:Connect(function(touch)
-    local position = touch.Position
-
-    for _, data in pairs(floatingButtons) do
-        local root = data and data.root
-        if root and root.Parent and root.Visible and not data.destroying then
-            local absPos = root.AbsolutePosition
-            local absSize = root.AbsoluteSize
-            local inside = position.X >= absPos.X
-                and position.X <= absPos.X + absSize.X
-                and position.Y >= absPos.Y
-                and position.Y <= absPos.Y + absSize.Y
-
-            if inside and data.callback then
-                task.spawn(data.callback)
-                break
-            end
-        end
-    end
-end)
-
 UserInputService.InputChanged:Connect(function(input)
     local state = floatingDragState
-    if not state or not state.root or not state.root.Parent then
-        return
-    end
+    if not state or not state.root or not state.root.Parent then return end
 
-    local shouldMove = false
+    local shouldMove
     if state.inputType == Enum.UserInputType.MouseButton1 then
         shouldMove = input.UserInputType == Enum.UserInputType.MouseMovement
     else
-        shouldMove = input == state.input
+        shouldMove = input.UserInputType == Enum.UserInputType.Touch
     end
-
     if not shouldMove then return end
 
     local delta = input.Position - state.startInputPosition
-    if delta.Magnitude > 5 then
-        state.dragging = true
-    end
+    if delta.Magnitude > 5 then state.dragging = true end
 
     local vp = GetViewportSize()
-    local halfW = FLOATING_BUTTON_SIZE.X * 0.5
-    local halfH = FLOATING_BUTTON_SIZE.Y * 0.5
-
-    local startX = state.startButtonPosition.X.Offset
-        + vp.X * state.startButtonPosition.X.Scale
-    local startY = state.startButtonPosition.Y.Offset
-        + vp.Y * state.startButtonPosition.Y.Scale
-
-    local newX = math.clamp(
-        startX + delta.X,
-        halfW + UI_SAFE_MARGIN,
-        vp.X - halfW - UI_SAFE_MARGIN
-    )
-    local newY = math.clamp(
-        startY + delta.Y,
-        halfH + UI_SAFE_MARGIN,
-        vp.Y - halfH - UI_SAFE_MARGIN
-    )
-
-    SetFloatingButtonPosition(state.root, UDim2.fromOffset(newX, newY))
+    local startX = state.startButtonPosition.X.Offset + vp.X * state.startButtonPosition.X.Scale
+    local startY = state.startButtonPosition.Y.Offset + vp.Y * state.startButtonPosition.Y.Scale
+    local safePosition = ClampFloatingToSafeArea(Vector2.new(startX + delta.X, startY + delta.Y))
+    SetFloatingButtonPosition(state.root, UDim2.fromOffset(safePosition.X, safePosition.Y))
 end)
 
 UserInputService.InputEnded:Connect(function(input)
     local state = floatingDragState
-    if not state then return end
-    if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
-    if input ~= state.input then return end
+    if not state or input ~= state.input then return end
 
     local root = state.root
     local wasDragging = state.dragging
     local buttonKey = root and root:GetAttribute("FloatingButtonKey")
-
     floatingDragState = nil
 
     if not wasDragging and root and root.Parent then
         local action = floatingButtons[buttonKey]
-        if action and action.callback then
-            task.spawn(action.callback)
-        end
+        if action and action.callback then task.spawn(action.callback) end
     end
 end)
 
@@ -519,7 +504,7 @@ function CreateFloatingButton(buttonKey, text, side, callback)
     root.Position = GetFloatingInitialPosition(side)
     root.BackgroundTransparency = 1
     root.GroupTransparency = 1
-    root.ZIndex = 120
+    root.ZIndex = 80
     root.Parent = screenGui
 
     local button = Instance.new("TextButton")
@@ -530,10 +515,10 @@ function CreateFloatingButton(buttonKey, text, side, callback)
     button.BorderSizePixel = 0
     button.AutoButtonColor = false
     button.Text = text
-    button.TextColor3 = Color3.fromRGB(245, 245, 245)
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
     button.TextSize = 17
     button.Font = Enum.Font.GothamBold
-    button.ZIndex = 121
+    button.ZIndex = 81
     button.Parent = root
 
     local corner = Instance.new("UICorner")
@@ -1874,7 +1859,7 @@ local function filterToggles(currentActiveTab, query)
 				task.delay(delay, function()
 					if not child or not child.Parent then return end
 					TweenService:Create(child, TweenInfo.new(0.2, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), {
-						Size = UDim2.new(1, -10, 0, 60), BackgroundTransparency = 0.45
+						Size = UDim2.new(1, -10, 0, child:GetAttribute("ItemHeight") or 60), BackgroundTransparency = 0.45
 					}):Play()
 					if t then TweenService:Create(t, TweenInfo.new(0.15), {TextTransparency = 0}):Play() end
 					if d then TweenService:Create(d, TweenInfo.new(0.15), {TextTransparency = 0}):Play() end
@@ -2128,6 +2113,152 @@ local function createToggle(parent, configKey, tabCategory)
 	end)
 end
 
+-- ==================== CRIAR SLIDER NUMÉRICO ====================
+local function createSlider(parent, configKey, tabCategory, minValue, maxValue, defaultValue)
+	local frame = Instance.new("Frame")
+	frame.Name = configKey
+	frame.Size = UDim2.new(1, -10, 0, 84)
+	frame.BackgroundColor3 = Color3.fromRGB(15, 5, 5)
+	frame.BackgroundTransparency = 0.45
+	frame.ZIndex = 11
+	frame.ClipsDescendants = true
+	frame:SetAttribute("Tab", tabCategory)
+	frame:SetAttribute("ConfigKey", configKey)
+	frame:SetAttribute("ItemHeight", 84)
+	frame.Parent = parent
+
+	local scale = Instance.new("UIScale", frame)
+	scale.Scale = 1
+	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
+	local optData = UI_TEXT.Options[configKey]
+	local title = Instance.new("TextLabel", frame)
+	title.Name = "Title"
+	title.Size = UDim2.new(0.58, 0, 0, 18)
+	title.Position = UDim2.new(0, 12, 0, 8)
+	title.BackgroundTransparency = 1
+	title.TextColor3 = Color3.fromRGB(210, 210, 210)
+	title.Font = Enum.Font.GothamBold
+	title.TextSize = 13
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.Text = optData and optData.Title or configKey
+	title.ZIndex = 12
+
+	local valueLabel = Instance.new("TextLabel", frame)
+	valueLabel.Name = "Value"
+	valueLabel.Size = UDim2.new(0, 58, 0, 18)
+	valueLabel.Position = UDim2.new(1, -70, 0, 8)
+	valueLabel.BackgroundTransparency = 1
+	valueLabel.TextColor3 = Color3.fromRGB(255, 80, 90)
+	valueLabel.Font = Enum.Font.GothamBold
+	valueLabel.TextSize = 12
+	valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+	valueLabel.ZIndex = 12
+
+	local desc = Instance.new("TextLabel", frame)
+	desc.Name = "Description"
+	desc.Size = UDim2.new(1, -24, 0, 20)
+	desc.Position = UDim2.new(0, 12, 0, 27)
+	desc.BackgroundTransparency = 1
+	desc.TextColor3 = Color3.fromRGB(130, 130, 130)
+	desc.Font = Enum.Font.Gotham
+	desc.TextSize = 10.5
+	desc.TextXAlignment = Enum.TextXAlignment.Left
+	desc.TextYAlignment = Enum.TextYAlignment.Top
+	desc.TextWrapped = true
+	desc.Text = optData and optData.Desc or ""
+	desc.ZIndex = 12
+
+	local track = Instance.new("Frame", frame)
+	track.Name = "SliderTrack"
+	track.Size = UDim2.new(1, -28, 0, 5)
+	track.Position = UDim2.new(0, 14, 1, -15)
+	track.BackgroundColor3 = Color3.fromRGB(45, 25, 27)
+	track.BorderSizePixel = 0
+	track.ZIndex = 12
+	Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
+
+	local fill = Instance.new("Frame", track)
+	fill.Name = "Fill"
+	fill.Size = UDim2.new(0, 0, 1, 0)
+	fill.BackgroundColor3 = Color3.fromRGB(139, 0, 0)
+	fill.BorderSizePixel = 0
+	fill.ZIndex = 13
+	Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+
+	local knob = Instance.new("Frame", track)
+	knob.Name = "Knob"
+	knob.Size = UDim2.fromOffset(12, 12)
+	knob.AnchorPoint = Vector2.new(0.5, 0.5)
+	knob.Position = UDim2.new(0, 0, 0.5, 0)
+	knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	knob.BorderSizePixel = 0
+	knob.ZIndex = 14
+	Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+	local knobStroke = Instance.new("UIStroke", knob)
+	knobStroke.Thickness = 1
+	knobStroke.Color = Color3.fromRGB(130, 0, 10)
+
+	local hit = Instance.new("TextButton", frame)
+	hit.Name = "SliderHitbox"
+	hit.Size = UDim2.new(1, -24, 0, 28)
+	hit.Position = UDim2.new(0, 12, 1, -29)
+	hit.BackgroundTransparency = 1
+	hit.Text = ""
+	hit.AutoButtonColor = false
+	hit.ZIndex = 15
+
+	local value = tonumber(defaultValue) or tonumber(Configs[configKey .. "Value"]) or minValue
+	value = math.clamp(value, minValue, maxValue)
+	local dragging = false
+
+	local function setValue(v, notify)
+		value = math.clamp(v, minValue, maxValue)
+		local alpha = (value - minValue) / (maxValue - minValue)
+		valueLabel.Text = string.format("%.1f", value)
+		fill.Size = UDim2.new(alpha, 0, 1, 0)
+		knob.Position = UDim2.new(alpha, 0, 0.5, 0)
+		Configs[configKey .. "Value"] = value
+		Configs[configKey] = true
+		if notify and _G.AkatCallbacks and type(_G.AkatCallbacks[configKey]) == "function" then
+			local ok, err = pcall(function() _G.AkatCallbacks[configKey](value) end)
+			if not ok then warn("[AKAT UI] Slider callback failed for " .. tostring(configKey) .. ": " .. tostring(err)) end
+		end
+	end
+
+	local function updateFromInput(input)
+		local x = input.Position.X
+		local left = track.AbsolutePosition.X
+		local width = math.max(1, track.AbsoluteSize.X)
+		local alpha = math.clamp((x - left) / width, 0, 1)
+		-- Continuous numeric value, rounded only for stable display precision.
+		local v = minValue + (maxValue - minValue) * alpha
+		setValue(math.floor(v * 10 + 0.5) / 10, true)
+	end
+
+	setValue(value, false)
+
+	hit.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			PlayUI_Click()
+			updateFromInput(input)
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			updateFromInput(input)
+		end
+	end)
+
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
+end
+
 searchTextBox:GetPropertyChangedSignal("Text"):Connect(function()
 	if filterDebounceThread then
 		task.cancel(filterDebounceThread)
@@ -2360,7 +2491,8 @@ createTabBtn("Teleports")
 createTabBtn("Settings")
 
 -- ==================== CRIAR TOGGLES ====================
-createToggle(togglesContainer, "Speed",        "Player")
+createSlider(togglesContainer, "Speed", "Player", 16, 100, 16)
+createSlider(togglesContainer, "JumpPower", "Player", 50, 150, 50)
 createToggle(togglesContainer, "AntiFling",    "Player")
 createToggle(togglesContainer, "Invisibility", "Player")
 
@@ -2375,7 +2507,7 @@ createToggle(togglesContainer, "XRay",         "Visuals")
 createToggle(togglesContainer, "TpToGun",      "Teleports")
 createToggle(togglesContainer, "SafeSpot",     "Teleports")
 
-createToggle(togglesContainer, "AutoCollect",  "Settings")
+createToggle(togglesContainer, "AutoFarm",    "Settings")
 createToggle(togglesContainer, "ChatRoles",    "Settings")
 
 -- ==================== ANIMAÇÃO DE INTRODUÇÃO ====================
