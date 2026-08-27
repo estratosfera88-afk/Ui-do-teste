@@ -46,10 +46,10 @@ local UI_TEXT = {
 	Tabs              = { Player = "Player", Combat = "Combat", Visuals = "Visuals", Teleports = "Teleports", Settings = "Settings" },
 		Options           = {
 		AutoShoot   = { Title = "Auto Shoot",     Desc = "Automatically equips the Gun and fires at the detected Murderer using Silent Aim." },
-		Reach       = { Title = "Knife Reach",       Desc = "Significantly increases your knife attack reach (18 studs)." },
+		Reach       = { Title = "Knife Reach",       Desc = "" },
 		ESP         = { Title = "Player ESP",        Desc = "Highlights players through walls (Sheriff Blue / Hero Yellow)." },
-		Speed       = { Title = "Walkspeed",         Desc = "Adjusts your movement speed with a continuous numeric slider." },
-		JumpPower  = { Title = "Jump Power",        Desc = "Adjusts your jump power with a continuous numeric slider." },
+		Speed       = { Title = "Speed",         Desc = "" },
+		JumpPower  = { Title = "Jump Power",   Desc = "" },
 		AntiFling   = { Title = "Anti-Fling",        Desc = "Disables collisions to prevent other players from flinging you." },
 		TpToGun     = { Title = "TP to Gun",         Desc = "Teleports to dropped gun (Automatically disabled for the Murderer)." },
 		SafeSpot    = { Title = "Safe Spot",         Desc = "Teleports you to an invisible sky platform to remain completely safe." },
@@ -1087,7 +1087,7 @@ badgeStrokeGrad.Color      = ColorSequence.new({
 local BadgeText            = Instance.new("TextLabel", BadgeFrame)
 BadgeText.Size             = UDim2.new(1, 0, 1, 0)
 BadgeText.BackgroundTransparency = 1
-BadgeText.Text             = "V3.6"
+BadgeText.Text             = "V3.9"
 BadgeText.TextColor3       = Color3.fromRGB(255, 255, 255)
 BadgeText.Font             = Enum.Font.GothamBold
 BadgeText.TextSize         = 8.5
@@ -2113,18 +2113,21 @@ local function createToggle(parent, configKey, tabCategory)
 	end)
 end
 
--- ==================== CRIAR SLIDER NUMÉRICO ====================
-local function createSlider(parent, configKey, tabCategory, minValue, maxValue, defaultValue)
+-- ==================== CRIAR SLIDER NUMÉRICO COMPACTO ====================
+-- Controles numéricos compactos: título + slider ficam na mesma linha.
+-- O valor exibido é inteiro, enquanto o valor interno continua permitindo
+-- movimentação contínua do slider.
+local function createCompactSlider(parent, configKey, tabCategory, minValue, maxValue, defaultValue)
 	local frame = Instance.new("Frame")
 	frame.Name = configKey
-	frame.Size = UDim2.new(1, -10, 0, 84)
+	frame.Size = UDim2.new(1, -10, 0, 42)
 	frame.BackgroundColor3 = Color3.fromRGB(15, 5, 5)
 	frame.BackgroundTransparency = 0.45
 	frame.ZIndex = 11
 	frame.ClipsDescendants = true
 	frame:SetAttribute("Tab", tabCategory)
 	frame:SetAttribute("ConfigKey", configKey)
-	frame:SetAttribute("ItemHeight", 84)
+	frame:SetAttribute("ItemHeight", 42)
 	frame.Parent = parent
 
 	local scale = Instance.new("UIScale", frame)
@@ -2134,45 +2137,34 @@ local function createSlider(parent, configKey, tabCategory, minValue, maxValue, 
 	local optData = UI_TEXT.Options[configKey]
 	local title = Instance.new("TextLabel", frame)
 	title.Name = "Title"
-	title.Size = UDim2.new(0.58, 0, 0, 18)
-	title.Position = UDim2.new(0, 12, 0, 8)
+	title.Size = UDim2.new(0, 105, 1, 0)
+	title.Position = UDim2.new(0, 12, 0, 0)
 	title.BackgroundTransparency = 1
 	title.TextColor3 = Color3.fromRGB(210, 210, 210)
 	title.Font = Enum.Font.GothamBold
 	title.TextSize = 13
 	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.TextYAlignment = Enum.TextYAlignment.Center
 	title.Text = optData and optData.Title or configKey
 	title.ZIndex = 12
 
+	-- Valor branco e sem casas decimais: 50.5 -> 50.
 	local valueLabel = Instance.new("TextLabel", frame)
 	valueLabel.Name = "Value"
-	valueLabel.Size = UDim2.new(0, 58, 0, 18)
-	valueLabel.Position = UDim2.new(1, -70, 0, 8)
+	valueLabel.Size = UDim2.fromOffset(30, 18)
+	valueLabel.Position = UDim2.new(1, -42, 0.5, -9)
 	valueLabel.BackgroundTransparency = 1
-	valueLabel.TextColor3 = Color3.fromRGB(255, 80, 90)
+	valueLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	valueLabel.Font = Enum.Font.GothamBold
-	valueLabel.TextSize = 12
+	valueLabel.TextSize = 11.5
 	valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-	valueLabel.ZIndex = 12
+	valueLabel.ZIndex = 13
 
-	local desc = Instance.new("TextLabel", frame)
-	desc.Name = "Description"
-	desc.Size = UDim2.new(1, -24, 0, 20)
-	desc.Position = UDim2.new(0, 12, 0, 27)
-	desc.BackgroundTransparency = 1
-	desc.TextColor3 = Color3.fromRGB(130, 130, 130)
-	desc.Font = Enum.Font.Gotham
-	desc.TextSize = 10.5
-	desc.TextXAlignment = Enum.TextXAlignment.Left
-	desc.TextYAlignment = Enum.TextYAlignment.Top
-	desc.TextWrapped = true
-	desc.Text = optData and optData.Desc or ""
-	desc.ZIndex = 12
-
+	-- Linha curta, posicionada diretamente à direita do nome.
 	local track = Instance.new("Frame", frame)
 	track.Name = "SliderTrack"
-	track.Size = UDim2.new(1, -28, 0, 5)
-	track.Position = UDim2.new(0, 14, 1, -15)
+	track.Size = UDim2.new(1, -160, 0, 4)
+	track.Position = UDim2.new(0, 118, 0.5, -2)
 	track.BackgroundColor3 = Color3.fromRGB(45, 25, 27)
 	track.BorderSizePixel = 0
 	track.ZIndex = 12
@@ -2188,7 +2180,7 @@ local function createSlider(parent, configKey, tabCategory, minValue, maxValue, 
 
 	local knob = Instance.new("Frame", track)
 	knob.Name = "Knob"
-	knob.Size = UDim2.fromOffset(12, 12)
+	knob.Size = UDim2.fromOffset(10, 10)
 	knob.AnchorPoint = Vector2.new(0.5, 0.5)
 	knob.Position = UDim2.new(0, 0, 0.5, 0)
 	knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -2201,8 +2193,8 @@ local function createSlider(parent, configKey, tabCategory, minValue, maxValue, 
 
 	local hit = Instance.new("TextButton", frame)
 	hit.Name = "SliderHitbox"
-	hit.Size = UDim2.new(1, -24, 0, 28)
-	hit.Position = UDim2.new(0, 12, 1, -29)
+	hit.Size = UDim2.new(1, -154, 0, 26)
+	hit.Position = UDim2.new(0, 112, 0.5, -13)
 	hit.BackgroundTransparency = 1
 	hit.Text = ""
 	hit.AutoButtonColor = false
@@ -2215,14 +2207,18 @@ local function createSlider(parent, configKey, tabCategory, minValue, maxValue, 
 	local function setValue(v, notify)
 		value = math.clamp(v, minValue, maxValue)
 		local alpha = (value - minValue) / (maxValue - minValue)
-		valueLabel.Text = string.format("%.1f", value)
+		valueLabel.Text = string.format("%.0f", value)
 		fill.Size = UDim2.new(alpha, 0, 1, 0)
 		knob.Position = UDim2.new(alpha, 0, 0.5, 0)
 		Configs[configKey .. "Value"] = value
 		Configs[configKey] = true
 		if notify and _G.AkatCallbacks and type(_G.AkatCallbacks[configKey]) == "function" then
-			local ok, err = pcall(function() _G.AkatCallbacks[configKey](value) end)
-			if not ok then warn("[AKAT UI] Slider callback failed for " .. tostring(configKey) .. ": " .. tostring(err)) end
+			local ok, err = pcall(function()
+				_G.AkatCallbacks[configKey](value)
+			end)
+			if not ok then
+				warn("[AKAT UI] Slider callback failed for " .. tostring(configKey) .. ": " .. tostring(err))
+			end
 		end
 	end
 
@@ -2231,15 +2227,16 @@ local function createSlider(parent, configKey, tabCategory, minValue, maxValue, 
 		local left = track.AbsolutePosition.X
 		local width = math.max(1, track.AbsoluteSize.X)
 		local alpha = math.clamp((x - left) / width, 0, 1)
-		-- Continuous numeric value, rounded only for stable display precision.
 		local v = minValue + (maxValue - minValue) * alpha
+		-- Mantém o valor interno contínuo em décimos; a UI mostra somente inteiro.
 		setValue(math.floor(v * 10 + 0.5) / 10, true)
 	end
 
 	setValue(value, false)
 
 	hit.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
 			dragging = true
 			PlayUI_Click()
 			updateFromInput(input)
@@ -2247,13 +2244,15 @@ local function createSlider(parent, configKey, tabCategory, minValue, maxValue, 
 	end)
 
 	UserInputService.InputChanged:Connect(function(input)
-		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+			or input.UserInputType == Enum.UserInputType.Touch) then
 			updateFromInput(input)
 		end
 	end)
 
 	UserInputService.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
 			dragging = false
 		end
 	end)
@@ -2491,13 +2490,13 @@ createTabBtn("Teleports")
 createTabBtn("Settings")
 
 -- ==================== CRIAR TOGGLES ====================
-createSlider(togglesContainer, "Speed", "Player", 16, 100, 16)
-createSlider(togglesContainer, "JumpPower", "Player", 50, 150, 50)
+createCompactSlider(togglesContainer, "Speed", "Player", 16, 100, 16)
+createCompactSlider(togglesContainer, "JumpPower", "Player", 50, 150, 50)
 createToggle(togglesContainer, "AntiFling",    "Player")
 createToggle(togglesContainer, "Invisibility", "Player")
 
 createToggle(togglesContainer, "AutoShoot",    "Combat")
-createToggle(togglesContainer, "Reach",        "Combat")
+createCompactSlider(togglesContainer, "Reach",        "Combat", 1, 50, 18)
 createToggle(togglesContainer, "KnifeThrow",   "Combat")
 createToggle(togglesContainer, "KillAll",      "Combat")
 
