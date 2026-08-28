@@ -1,4 +1,4 @@
--- [[ AKATSUKI UI ONLY [v5.8 - PLAYER SLIDERS / FLOATING SAFE AREA] - REFINED UNIFIED EDITION — FIXED BUILD ]]
+-- [[ AKATSUKI UI ONLY [v6.0 - PT DESCRIPTIONS / SLIDER FIX / AUTOSHOOT / VISUALS SYNC] - REFINED UNIFIED EDITION ]]
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -42,34 +42,32 @@ local Configs = {
 local UIState = "CLOSED"
 
 local UI_TEXT = {
-	SearchPlaceholder = "Search...",
-	ConfirmCloseTitle = "Do you want to close the script?",
-	ConfirmBtn        = "Yes",
-	CancelBtn         = "No",
+	SearchPlaceholder = "Pesquisar...",
+	ConfirmCloseTitle = "Deseja fechar o script?",
+	ConfirmBtn        = "Sim",
+	CancelBtn         = "Não",
 	Intro             = '<font color="#FFFFFF">Scripts by | </font><font color="#8B0000">AKATSUKI</font>',
 	Tabs              = { Player = "Player", Combat = "Combat", Visuals = "Visuals", Teleports = "Teleports", Settings = "Settings" },
 		Options           = {
-		AutoShoot   = { Title = "Auto Shoot",     Desc = "Automatically equips the Gun and fires at the detected Murderer using Silent Aim." },
-		Reach       = { Title = "Knife Reach",       Desc = "" },
+		AutoShoot   = { Title = "Auto Shoot",     Desc = "Equipa a arma automaticamente e atira no Murderer detectado usando Silent Aim." },
+		Reach       = { Title = "Knife Reach",    Desc = "Aumenta o alcance da faca para eliminar jogadores à distância." },
 
-		ESP         = { Title = "Player ESP",        Desc = "Highlights players through walls (Sheriff Blue / Hero Yellow)." },
-		Speed       = { Title = "Speed",         Desc = "" },
-		JumpPower  = { Title = "Jump Power",   Desc = "" },
-		AntiFling   = { Title = "Anti-Fling",        Desc = "Disables collisions to prevent other players from flinging you." },
-		TpToGun     = { Title = "TP to Gun",         Desc = "Teleports to dropped gun (Automatically disabled for the Murderer)." },
-		TpLobby     = { Title = "Tp Lobby",          Desc = "Teleports you to the lobby spawn when available." },
-		TpMap       = { Title = "Tp Map",            Desc = "Teleports you to the current map area when a valid map position is available." },
-		SafeSpot    = { Title = "Safe Spot",         Desc = "Teleports you to an invisible sky platform to remain completely safe." },
-		AutoFarm    = { Title = "Auto Farm",          Desc = "Smoothly collects coins continuously without clunky visual stops." },
-		ChatRoles   = { Title = "Reveal Roles",      Desc = "Sends a message in chat revealing active roles." },
-		XRay        = { Title = "X-Ray",           Desc = "Full vision through objects and terrain." },
-		KillAll     = { Title = "Kill All",        Desc = "Eliminates all players at once (if you are the Killer)." },
-		Invisibility= { Title = "Invisibility",    Desc = "Makes your character invisible to other players." },
-        ViewReach  = { Title = "View Reach",       Desc = "Shows the active melee reach area around other players, including Innocents." },
-        Name       = { Title = "Name ESP",          Desc = "Displays player names above their characters and updates them each round." },
-        Tracer     = { Title = "Tracer ESP",        Desc = "Draws a line from you to other players and updates after each round." },
-        TpLobby    = { Title = "Tp Lobby",         Desc = "Teleports you to the lobby spawn when available." },
-        TpMap      = { Title = "Tp Map",           Desc = "Teleports you to the current map area when a valid map position is available." }
+		ESP         = { Title = "Player ESP",     Desc = "Destaca jogadores através das paredes (Assassino Vermelho / Sheriff Azul / Herói Amarelo / Inocente Verde)." },
+		Speed       = { Title = "Velocidade",     Desc = "Aumenta a velocidade de movimento do seu personagem." },
+		JumpPower   = { Title = "Força de Pulo",  Desc = "Aumenta a altura do pulo do seu personagem." },
+		AntiFling   = { Title = "Anti-Fling",     Desc = "Desativa colisões para evitar que outros jogadores te joguem para longe." },
+		TpToGun     = { Title = "TP para Arma",   Desc = "Teleporta até a arma largada no chão (desativado automaticamente para o Assassino)." },
+		TpLobby     = { Title = "Tp Lobby",       Desc = "Teleporta você para o spawn do lobby quando disponível." },
+		TpMap       = { Title = "Tp Mapa",        Desc = "Teleporta você para a área do mapa atual quando uma posição válida está disponível." },
+		SafeSpot    = { Title = "Lugar Seguro",   Desc = "Teleporta você para uma plataforma invisível no céu para ficar completamente seguro." },
+		AutoFarm    = { Title = "Auto Farm",      Desc = "Coleta moedas automaticamente de forma suave, sem travar ou prender seu personagem." },
+		ChatRoles   = { Title = "Revelar Cargos", Desc = "Envia uma mensagem no chat revelando os cargos ativos na rodada." },
+		XRay        = { Title = "X-Ray",          Desc = "Visão total através de objetos e terreno." },
+		KillAll     = { Title = "Matar Todos",    Desc = "Elimina todos os jogadores de uma vez (somente se você for o Assassino)." },
+		Invisibility= { Title = "Invisibilidade", Desc = "Torna seu personagem invisível para os outros jogadores." },
+        ViewReach   = { Title = "Ver Alcance",    Desc = "Mostra a área de alcance corpo a corpo ao redor dos jogadores, incluindo Inocentes." },
+        Name        = { Title = "Nome ESP",       Desc = "Exibe os nomes dos jogadores acima dos personagens com a cor do cargo, atualiza a cada rodada." },
+        Tracer      = { Title = "Tracer ESP",     Desc = "Desenha uma linha até os outros jogadores com a cor do cargo, atualiza após cada rodada." },
 	}
 }
 
@@ -2211,12 +2209,11 @@ local function createCompactSlider(parent, configKey, tabCategory, minValue, max
 	title.Text = optData and optData.Title or configKey
 	title.ZIndex = 12
 
-	-- Valor branco e sem casas decimais: 50.5 -> 50.
+	-- Valor numérico posicionado à direita da track.
 	local valueLabel = Instance.new("TextLabel", frame)
 	valueLabel.Name = "Value"
 	valueLabel.Size = UDim2.fromOffset(42, 22)
-	valueLabel.Position = UDim2.new(1, -62, 0.5, -11)
-	valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+	valueLabel.Position = UDim2.new(1, -42, 0.5, -11)
 	valueLabel.BackgroundTransparency = 1
 	valueLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	valueLabel.Font = Enum.Font.GothamBold
@@ -2224,10 +2221,10 @@ local function createCompactSlider(parent, configKey, tabCategory, minValue, max
 	valueLabel.TextXAlignment = Enum.TextXAlignment.Left
 	valueLabel.ZIndex = 13
 
-	-- Slider alinhado à direita, na mesma zona visual dos toggles.
+	-- Slider alinhado à direita com menos espaço morto.
 	local track = Instance.new("Frame", frame)
 	track.Name = "SliderTrack"
-	track.Size = UDim2.new(1, -185, 0, 6)
+	track.Size = UDim2.new(1, -155, 0, 6)
 	track.Position = UDim2.new(0, 116, 0.5, -3)
 	track.BackgroundColor3 = Color3.fromRGB(45, 25, 27)
 	track.BorderSizePixel = 0
@@ -2254,7 +2251,7 @@ local function createCompactSlider(parent, configKey, tabCategory, minValue, max
 
 	local hit = Instance.new("TextButton", frame)
 	hit.Name = "SliderHitbox"
-	hit.Size = UDim2.new(1, -175, 0, 30)
+	hit.Size = UDim2.new(1, -145, 0, 30)
 	hit.Position = UDim2.new(0, 110, 0.5, -15)
 	hit.BackgroundTransparency = 1
 	hit.Text = ""
