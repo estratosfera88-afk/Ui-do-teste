@@ -31,7 +31,12 @@ local Configs = {
 	KnifeThrow  = false,
 	XRay        = false,
 	KillAll     = false,
-	Invisibility= false
+	Invisibility= false,
+	ViewReach   = false,
+	Name        = false,
+	Tracer      = false,
+	TpLobby     = false,
+	TpMap       = false
 }
 
 -- ==================== DYNAMIC UI COMPONENT & STATE MACHINE ====================
@@ -47,18 +52,26 @@ local UI_TEXT = {
 		Options           = {
 		AutoShoot   = { Title = "Auto Shoot",     Desc = "Automatically equips the Gun and fires at the detected Murderer using Silent Aim." },
 		Reach       = { Title = "Knife Reach",       Desc = "" },
+
 		ESP         = { Title = "Player ESP",        Desc = "Highlights players through walls (Sheriff Blue / Hero Yellow)." },
 		Speed       = { Title = "Speed",         Desc = "" },
 		JumpPower  = { Title = "Jump Power",   Desc = "" },
 		AntiFling   = { Title = "Anti-Fling",        Desc = "Disables collisions to prevent other players from flinging you." },
 		TpToGun     = { Title = "TP to Gun",         Desc = "Teleports to dropped gun (Automatically disabled for the Murderer)." },
+		TpLobby     = { Title = "Tp Lobby",          Desc = "" },
+		TpMap       = { Title = "Tp Map",            Desc = "" },
 		SafeSpot    = { Title = "Safe Spot",         Desc = "Teleports you to an invisible sky platform to remain completely safe." },
 		AutoFarm    = { Title = "Auto Farm",          Desc = "Smoothly collects coins continuously without clunky visual stops." },
 		ChatRoles   = { Title = "Reveal Roles",      Desc = "Sends a message in chat revealing active roles." },
 		KnifeThrow  = { Title = "Knife Throw",     Desc = "Automatically throws the knife with precision." },
 		XRay        = { Title = "X-Ray",           Desc = "Full vision through objects and terrain." },
 		KillAll     = { Title = "Kill All",        Desc = "Eliminates all players at once (if you are the Killer)." },
-		Invisibility= { Title = "Invisibility",    Desc = "Makes your character invisible to other players." }
+		Invisibility= { Title = "Invisibility",    Desc = "Makes your character invisible to other players." },
+        ViewReach  = { Title = "View Reach",       Desc = "" },
+        Name       = { Title = "Name",             Desc = "" },
+        Tracer     = { Title = "Tracer",           Desc = "" },
+        TpLobby    = { Title = "Tp Lobby",         Desc = "" },
+        TpMap      = { Title = "Tp Map",           Desc = "" }
 	}
 }
 
@@ -70,7 +83,7 @@ local isConfirmOpen = false
 
 -- ==================== DIMENSIONAMENTO RESPONSIVO ====================
 -- Mantém os tamanhos originais no PC e limita a janela em telas pequenas.
-local NORMAL_UI_SIZE   = Vector2.new(580, 400)
+local NORMAL_UI_SIZE   = Vector2.new(580, 385)
 local EXPANDED_UI_SIZE = Vector2.new(720, 405)
 local UI_SAFE_MARGIN   = 14
 
@@ -511,7 +524,7 @@ function CreateFloatingButton(buttonKey, text, side, callback)
     button.Name = "Action"
     button.Size = UDim2.fromScale(1, 1)
     button.BackgroundColor3 = Color3.fromRGB(18, 2, 4)
-    button.BackgroundTransparency = 0.18
+    button.BackgroundTransparency = 0.42
     button.BorderSizePixel = 0
     button.AutoButtonColor = false
     button.Text = text
@@ -565,6 +578,15 @@ function CreateFloatingButton(buttonKey, text, side, callback)
     }
 
     SetupFloatingDrag(button, root)
+
+    task.spawn(function()
+        local rotation = 45
+        while root.Parent and floatingButtons[buttonKey] and floatingButtons[buttonKey].root == root do
+            rotation = (rotation + 1.5) % 360
+            if gradient and gradient.Parent then gradient.Rotation = rotation end
+            task.wait(0.03)
+        end
+    end)
 
     TweenService:Create(
         root,
@@ -2113,6 +2135,64 @@ local function createToggle(parent, configKey, tabCategory)
 	end)
 end
 
+-- ==================== TOGGLE COMPACTO ====================
+local function createCompactToggle(parent, configKey, tabCategory)
+    local frame = Instance.new("Frame")
+    frame.Name = configKey
+    frame.Size = UDim2.new(1, -10, 0, 42)
+    frame.BackgroundColor3 = Color3.fromRGB(15, 5, 5)
+    frame.BackgroundTransparency = 0.45
+    frame.ZIndex = 11
+    frame.ClipsDescendants = true
+    frame:SetAttribute("Tab", tabCategory)
+    frame:SetAttribute("ConfigKey", configKey)
+    frame:SetAttribute("ItemHeight", 42)
+    frame.Parent = parent
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
+    local title = Instance.new("TextLabel", frame)
+    title.Size = UDim2.new(1, -78, 1, 0)
+    title.Position = UDim2.fromOffset(12, 0)
+    title.BackgroundTransparency = 1
+    title.TextColor3 = Color3.fromRGB(210,210,210)
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 13
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.TextYAlignment = Enum.TextYAlignment.Center
+    title.Text = (UI_TEXT.Options[configKey] and UI_TEXT.Options[configKey].Title) or configKey
+    title.ZIndex = 12
+
+    local track = Instance.new("Frame", frame)
+    track.Size = UDim2.fromOffset(42, 22)
+    track.Position = UDim2.new(1, -52, 0.5, -11)
+    track.BackgroundColor3 = Configs[configKey] and Color3.fromHex("#8B0000") or Color3.fromRGB(30,30,30)
+    track.ZIndex = 12
+    Instance.new("UICorner", track).CornerRadius = UDim.new(1,0)
+
+    local circle = Instance.new("Frame", track)
+    circle.Size = UDim2.fromOffset(16,16)
+    circle.Position = Configs[configKey] and UDim2.new(1,-18,0.5,-8) or UDim2.new(0,2,0.5,-8)
+    circle.BackgroundColor3 = Color3.fromRGB(255,255,255)
+    circle.ZIndex = 13
+    Instance.new("UICorner", circle).CornerRadius = UDim.new(1,0)
+
+    local hit = Instance.new("TextButton", frame)
+    hit.Size = UDim2.fromScale(1,1)
+    hit.BackgroundTransparency = 1
+    hit.Text = ""
+    hit.ZIndex = 14
+    hit.MouseButton1Click:Connect(function()
+        PlayUI_Click()
+        Configs[configKey] = not Configs[configKey]
+        local on = Configs[configKey]
+        TweenService:Create(circle, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = on and UDim2.new(1,-18,0.5,-8) or UDim2.new(0,2,0.5,-8)}):Play()
+        TweenService:Create(track, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = on and Color3.fromHex("#8B0000") or Color3.fromRGB(30,30,30)}):Play()
+        if _G.AkatCallbacks and type(_G.AkatCallbacks[configKey]) == "function" then
+            pcall(function() _G.AkatCallbacks[configKey](on) end)
+        end
+    end)
+end
+
 -- ==================== CRIAR SLIDER NUMÉRICO COMPACTO ====================
 -- Controles numéricos compactos: título + slider ficam na mesma linha.
 -- O valor exibido é inteiro, enquanto o valor interno continua permitindo
@@ -2163,7 +2243,7 @@ local function createCompactSlider(parent, configKey, tabCategory, minValue, max
 	-- Linha curta, posicionada diretamente à direita do nome.
 	local track = Instance.new("Frame", frame)
 	track.Name = "SliderTrack"
-	track.Size = UDim2.new(1, -160, 0, 4)
+	track.Size = UDim2.new(1, -190, 0, 4)
 	track.Position = UDim2.new(0, 118, 0.5, -2)
 	track.BackgroundColor3 = Color3.fromRGB(45, 25, 27)
 	track.BorderSizePixel = 0
@@ -2193,7 +2273,7 @@ local function createCompactSlider(parent, configKey, tabCategory, minValue, max
 
 	local hit = Instance.new("TextButton", frame)
 	hit.Name = "SliderHitbox"
-	hit.Size = UDim2.new(1, -154, 0, 26)
+	hit.Size = UDim2.new(1, -184, 0, 26)
 	hit.Position = UDim2.new(0, 112, 0.5, -13)
 	hit.BackgroundTransparency = 1
 	hit.Text = ""
@@ -2207,7 +2287,7 @@ local function createCompactSlider(parent, configKey, tabCategory, minValue, max
 	local function setValue(v, notify)
 		value = math.clamp(v, minValue, maxValue)
 		local alpha = (value - minValue) / (maxValue - minValue)
-		valueLabel.Text = string.format("%.0f", value)
+		valueLabel.Text = (configKey == "Speed" or configKey == "JumpPower") and string.format("%.1f", value) or string.format("%.0f", value)
 		fill.Size = UDim2.new(alpha, 0, 1, 0)
 		knob.Position = UDim2.new(alpha, 0, 0.5, 0)
 		Configs[configKey .. "Value"] = value
@@ -2238,8 +2318,6 @@ local function createCompactSlider(parent, configKey, tabCategory, minValue, max
 		if input.UserInputType == Enum.UserInputType.MouseButton1
 			or input.UserInputType == Enum.UserInputType.Touch then
 			dragging = true
-			PlayUI_Click()
-			updateFromInput(input)
 		end
 	end)
 
@@ -2334,7 +2412,10 @@ SetUIState = function(newState)
 
 	if newState == "OPEN" then
 		mainWrapper.Visible = true
-		mainWrapper.Size    = UDim2.new(0, 480, 0, 260)
+		do
+			local normalSize = select(1, GetResponsiveUISizes())
+			mainWrapper.Size = normalSize
+		end
 		AplicarFadeSincronizado(mainWrapper, true, 0)
 		AplicarFadeSincronizado(mainWrapper, false, tempoAnim)
 
@@ -2355,8 +2436,8 @@ SetUIState = function(newState)
 		local normalSize = select(1, GetResponsiveUISizes())
 		local vp = GetViewportSize()
 		local shrinkSize = UDim2.fromOffset(
-			math.min(480, math.max(1, vp.X - (UI_SAFE_MARGIN * 2))),
-			math.min(260, math.max(1, vp.Y - (UI_SAFE_MARGIN * 2)))
+			math.min(NORMAL_UI_SIZE.X, math.max(1, vp.X - (UI_SAFE_MARGIN * 2))),
+			math.min(NORMAL_UI_SIZE.Y, math.max(1, vp.Y - (UI_SAFE_MARGIN * 2)))
 		)
 		local closeTween = TweenService:Create(mainWrapper, windowAnim, {Size = shrinkSize})
 		closeTween:Play()
@@ -2496,13 +2577,18 @@ createToggle(togglesContainer, "AntiFling",    "Player")
 createToggle(togglesContainer, "Invisibility", "Player")
 
 createToggle(togglesContainer, "AutoShoot",    "Combat")
+createToggle(togglesContainer, "ViewReach",   "Combat")
 createCompactSlider(togglesContainer, "Reach",        "Combat", 1, 50, 18)
 createToggle(togglesContainer, "KnifeThrow",   "Combat")
 createToggle(togglesContainer, "KillAll",      "Combat")
 
 createToggle(togglesContainer, "ESP",          "Visuals")
+createToggle(togglesContainer, "Name",         "Visuals")
+createToggle(togglesContainer, "Tracer",       "Visuals")
 createToggle(togglesContainer, "XRay",         "Visuals")
 
+createCompactToggle(togglesContainer, "TpLobby", "Teleports")
+createCompactToggle(togglesContainer, "TpMap", "Teleports")
 createToggle(togglesContainer, "TpToGun",      "Teleports")
 createToggle(togglesContainer, "SafeSpot",     "Teleports")
 
@@ -2567,12 +2653,17 @@ local function ExecutarIntroAkat()
 	RegistrarTransparencias(mainWrapper)
 	for _, item in ipairs(mainWrapper:GetDescendants()) do RegistrarTransparencias(item) end
 
+	local introNormalSize = select(1, GetResponsiveUISizes())
+	mainWrapper.Size = introNormalSize
 	mainWrapper.Visible = true
 	FloatBtn.Visible    = true
 	UIState             = "OPEN"
 	isTransitioning     = false
 
+	local oldMainScale = mainWrapper:FindFirstChild("IntroMainScale")
+	if oldMainScale then oldMainScale:Destroy() end
 	local MainScale     = Instance.new("UIScale", mainWrapper)
+	MainScale.Name = "IntroMainScale"
 	MainScale.Scale     = 0.85
 	AplicarFadeSincronizado(mainWrapper, true, 0)
 	AplicarFadeSincronizado(mainWrapper, false, 0.35)
