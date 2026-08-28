@@ -28,7 +28,6 @@ local Configs = {
 	SafeSpot    = false,
 	AutoFarm    = false,
 	ChatRoles   = false,
-	KnifeThrow  = false,
 	XRay        = false,
 	KillAll     = false,
 	Invisibility= false,
@@ -63,7 +62,6 @@ local UI_TEXT = {
 		SafeSpot    = { Title = "Safe Spot",         Desc = "Teleports you to an invisible sky platform to remain completely safe." },
 		AutoFarm    = { Title = "Auto Farm",          Desc = "Smoothly collects coins continuously without clunky visual stops." },
 		ChatRoles   = { Title = "Reveal Roles",      Desc = "Sends a message in chat revealing active roles." },
-		KnifeThrow  = { Title = "Knife Throw",     Desc = "Automatically throws the knife with precision." },
 		XRay        = { Title = "X-Ray",           Desc = "Full vision through objects and terrain." },
 		KillAll     = { Title = "Kill All",        Desc = "Eliminates all players at once (if you are the Killer)." },
 		Invisibility= { Title = "Invisibility",    Desc = "Makes your character invisible to other players." },
@@ -660,21 +658,6 @@ local function SyncFloatingButton(configKey)
             )
         else
             DestroyFloatingButton("AutoShoot")
-        end
-    elseif configKey == "KnifeThrow" then
-        if Configs[configKey] then
-            CreateFloatingButton(
-                "KnifeThrow",
-                "KNIFE THROW",
-                "left",
-                function()
-                    if _G.AkatCallbacks and type(_G.AkatCallbacks.KnifeThrowOnce) == "function" then
-                        _G.AkatCallbacks.KnifeThrowOnce()
-                    end
-                end
-            )
-        else
-            DestroyFloatingButton("KnifeThrow")
         end
     end
 end
@@ -2231,20 +2214,20 @@ local function createCompactSlider(parent, configKey, tabCategory, minValue, max
 	-- Valor branco e sem casas decimais: 50.5 -> 50.
 	local valueLabel = Instance.new("TextLabel", frame)
 	valueLabel.Name = "Value"
-	valueLabel.Size = UDim2.fromOffset(34, 22)
-	valueLabel.Position = UDim2.new(0, 80, 0.5, -11)
+	valueLabel.Size = UDim2.fromOffset(32, 22)
+	valueLabel.Position = UDim2.new(1, -30, 0.5, -11)
 	valueLabel.BackgroundTransparency = 1
 	valueLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	valueLabel.Font = Enum.Font.GothamBold
 	valueLabel.TextSize = 15
-	valueLabel.TextXAlignment = Enum.TextXAlignment.Left
+	valueLabel.TextXAlignment = Enum.TextXAlignment.Right
 	valueLabel.ZIndex = 13
 
 	-- Linha curta, posicionada diretamente à direita do nome.
 	local track = Instance.new("Frame", frame)
 	track.Name = "SliderTrack"
-	track.Size = UDim2.new(1, -225, 0, 4)
-	track.Position = UDim2.new(0, 118, 0.5, -2)
+	track.Size = UDim2.new(0, 155, 0, 5)
+	track.Position = UDim2.new(1, -190, 0.5, -2.5)
 	track.BackgroundColor3 = Color3.fromRGB(45, 25, 27)
 	track.BorderSizePixel = 0
 	track.ZIndex = 12
@@ -2260,21 +2243,18 @@ local function createCompactSlider(parent, configKey, tabCategory, minValue, max
 
 	local knob = Instance.new("Frame", track)
 	knob.Name = "Knob"
-	knob.Size = UDim2.fromOffset(10, 10)
+	knob.Size = UDim2.fromOffset(12, 12)
 	knob.AnchorPoint = Vector2.new(0.5, 0.5)
 	knob.Position = UDim2.new(0, 0, 0.5, 0)
 	knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 	knob.BorderSizePixel = 0
 	knob.ZIndex = 14
 	Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
-	local knobStroke = Instance.new("UIStroke", knob)
-	knobStroke.Thickness = 1
-	knobStroke.Color = Color3.fromRGB(130, 0, 10)
 
 	local hit = Instance.new("TextButton", frame)
 	hit.Name = "SliderHitbox"
-	hit.Size = UDim2.new(1, -219, 0, 26)
-	hit.Position = UDim2.new(0, 112, 0.5, -13)
+	hit.Size = UDim2.new(0, 178, 0, 28)
+	hit.Position = UDim2.new(1, -202, 0.5, -14)
 	hit.BackgroundTransparency = 1
 	hit.Text = ""
 	hit.AutoButtonColor = false
@@ -2579,7 +2559,6 @@ createToggle(togglesContainer, "Invisibility", "Player")
 createToggle(togglesContainer, "AutoShoot",    "Combat")
 createCompactSlider(togglesContainer, "Reach",        "Combat", 1, 50, 18)
 createToggle(togglesContainer, "ViewReach",   "Combat")
-createToggle(togglesContainer, "KnifeThrow",   "Combat")
 createToggle(togglesContainer, "KillAll",      "Combat")
 
 createToggle(togglesContainer, "ESP",          "Visuals")
