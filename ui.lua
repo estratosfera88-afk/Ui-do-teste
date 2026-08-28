@@ -2200,7 +2200,7 @@ local function createCompactSlider(parent, configKey, tabCategory, minValue, max
 	local optData = UI_TEXT.Options[configKey]
 	local title = Instance.new("TextLabel", frame)
 	title.Name = "Title"
-	title.Size = UDim2.new(0, 72, 1, 0)
+	title.Size = UDim2.new(0, 105, 1, 0)
 	title.Position = UDim2.new(0, 12, 0, 0)
 	title.BackgroundTransparency = 1
 	title.TextColor3 = Color3.fromRGB(210, 210, 210)
@@ -2214,20 +2214,21 @@ local function createCompactSlider(parent, configKey, tabCategory, minValue, max
 	-- Valor branco e sem casas decimais: 50.5 -> 50.
 	local valueLabel = Instance.new("TextLabel", frame)
 	valueLabel.Name = "Value"
-	valueLabel.Size = UDim2.fromOffset(32, 22)
-	valueLabel.Position = UDim2.new(1, -30, 0.5, -11)
+	valueLabel.Size = UDim2.fromOffset(42, 22)
+	valueLabel.Position = UDim2.new(1, -62, 0.5, -11)
+	valueLabel.TextXAlignment = Enum.TextXAlignment.Right
 	valueLabel.BackgroundTransparency = 1
 	valueLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	valueLabel.Font = Enum.Font.GothamBold
 	valueLabel.TextSize = 15
-	valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+	valueLabel.TextXAlignment = Enum.TextXAlignment.Left
 	valueLabel.ZIndex = 13
 
-	-- Linha curta, posicionada diretamente à direita do nome.
+	-- Slider alinhado à direita, na mesma zona visual dos toggles.
 	local track = Instance.new("Frame", frame)
 	track.Name = "SliderTrack"
-	track.Size = UDim2.new(0, 155, 0, 5)
-	track.Position = UDim2.new(1, -190, 0.5, -2.5)
+	track.Size = UDim2.new(1, -185, 0, 6)
+	track.Position = UDim2.new(0, 116, 0.5, -3)
 	track.BackgroundColor3 = Color3.fromRGB(45, 25, 27)
 	track.BorderSizePixel = 0
 	track.ZIndex = 12
@@ -2243,7 +2244,7 @@ local function createCompactSlider(parent, configKey, tabCategory, minValue, max
 
 	local knob = Instance.new("Frame", track)
 	knob.Name = "Knob"
-	knob.Size = UDim2.fromOffset(12, 12)
+	knob.Size = UDim2.fromOffset(14, 14)
 	knob.AnchorPoint = Vector2.new(0.5, 0.5)
 	knob.Position = UDim2.new(0, 0, 0.5, 0)
 	knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -2253,8 +2254,8 @@ local function createCompactSlider(parent, configKey, tabCategory, minValue, max
 
 	local hit = Instance.new("TextButton", frame)
 	hit.Name = "SliderHitbox"
-	hit.Size = UDim2.new(0, 178, 0, 28)
-	hit.Position = UDim2.new(1, -202, 0.5, -14)
+	hit.Size = UDim2.new(1, -175, 0, 30)
+	hit.Position = UDim2.new(0, 110, 0.5, -15)
 	hit.BackgroundTransparency = 1
 	hit.Text = ""
 	hit.AutoButtonColor = false
