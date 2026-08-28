@@ -58,8 +58,8 @@ local UI_TEXT = {
 		JumpPower  = { Title = "Jump Power",   Desc = "" },
 		AntiFling   = { Title = "Anti-Fling",        Desc = "Disables collisions to prevent other players from flinging you." },
 		TpToGun     = { Title = "TP to Gun",         Desc = "Teleports to dropped gun (Automatically disabled for the Murderer)." },
-		TpLobby     = { Title = "Tp Lobby",          Desc = "" },
-		TpMap       = { Title = "Tp Map",            Desc = "" },
+		TpLobby     = { Title = "Tp Lobby",          Desc = "Teleports you to the lobby spawn when available." },
+		TpMap       = { Title = "Tp Map",            Desc = "Teleports you to the current map area when a valid map position is available." },
 		SafeSpot    = { Title = "Safe Spot",         Desc = "Teleports you to an invisible sky platform to remain completely safe." },
 		AutoFarm    = { Title = "Auto Farm",          Desc = "Smoothly collects coins continuously without clunky visual stops." },
 		ChatRoles   = { Title = "Reveal Roles",      Desc = "Sends a message in chat revealing active roles." },
@@ -67,11 +67,11 @@ local UI_TEXT = {
 		XRay        = { Title = "X-Ray",           Desc = "Full vision through objects and terrain." },
 		KillAll     = { Title = "Kill All",        Desc = "Eliminates all players at once (if you are the Killer)." },
 		Invisibility= { Title = "Invisibility",    Desc = "Makes your character invisible to other players." },
-        ViewReach  = { Title = "View Reach",       Desc = "" },
-        Name       = { Title = "Name",             Desc = "" },
-        Tracer     = { Title = "Tracer",           Desc = "" },
-        TpLobby    = { Title = "Tp Lobby",         Desc = "" },
-        TpMap      = { Title = "Tp Map",           Desc = "" }
+        ViewReach  = { Title = "View Reach",       Desc = "Shows the active melee reach area around other players, including Innocents." },
+        Name       = { Title = "Name ESP",          Desc = "Displays player names above their characters and updates them each round." },
+        Tracer     = { Title = "Tracer ESP",        Desc = "Draws a line from you to other players and updates after each round." },
+        TpLobby    = { Title = "Tp Lobby",         Desc = "Teleports you to the lobby spawn when available." },
+        TpMap      = { Title = "Tp Map",           Desc = "Teleports you to the current map area when a valid map position is available." }
 	}
 }
 
@@ -2217,7 +2217,7 @@ local function createCompactSlider(parent, configKey, tabCategory, minValue, max
 	local optData = UI_TEXT.Options[configKey]
 	local title = Instance.new("TextLabel", frame)
 	title.Name = "Title"
-	title.Size = UDim2.new(0, 105, 1, 0)
+	title.Size = UDim2.new(0, 72, 1, 0)
 	title.Position = UDim2.new(0, 12, 0, 0)
 	title.BackgroundTransparency = 1
 	title.TextColor3 = Color3.fromRGB(210, 210, 210)
@@ -2231,19 +2231,19 @@ local function createCompactSlider(parent, configKey, tabCategory, minValue, max
 	-- Valor branco e sem casas decimais: 50.5 -> 50.
 	local valueLabel = Instance.new("TextLabel", frame)
 	valueLabel.Name = "Value"
-	valueLabel.Size = UDim2.fromOffset(30, 18)
-	valueLabel.Position = UDim2.new(1, -42, 0.5, -9)
+	valueLabel.Size = UDim2.fromOffset(34, 22)
+	valueLabel.Position = UDim2.new(0, 80, 0.5, -11)
 	valueLabel.BackgroundTransparency = 1
 	valueLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	valueLabel.Font = Enum.Font.GothamBold
-	valueLabel.TextSize = 11.5
-	valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+	valueLabel.TextSize = 15
+	valueLabel.TextXAlignment = Enum.TextXAlignment.Left
 	valueLabel.ZIndex = 13
 
 	-- Linha curta, posicionada diretamente à direita do nome.
 	local track = Instance.new("Frame", frame)
 	track.Name = "SliderTrack"
-	track.Size = UDim2.new(1, -190, 0, 4)
+	track.Size = UDim2.new(1, -225, 0, 4)
 	track.Position = UDim2.new(0, 118, 0.5, -2)
 	track.BackgroundColor3 = Color3.fromRGB(45, 25, 27)
 	track.BorderSizePixel = 0
@@ -2273,7 +2273,7 @@ local function createCompactSlider(parent, configKey, tabCategory, minValue, max
 
 	local hit = Instance.new("TextButton", frame)
 	hit.Name = "SliderHitbox"
-	hit.Size = UDim2.new(1, -184, 0, 26)
+	hit.Size = UDim2.new(1, -219, 0, 26)
 	hit.Position = UDim2.new(0, 112, 0.5, -13)
 	hit.BackgroundTransparency = 1
 	hit.Text = ""
@@ -2577,8 +2577,8 @@ createToggle(togglesContainer, "AntiFling",    "Player")
 createToggle(togglesContainer, "Invisibility", "Player")
 
 createToggle(togglesContainer, "AutoShoot",    "Combat")
-createToggle(togglesContainer, "ViewReach",   "Combat")
 createCompactSlider(togglesContainer, "Reach",        "Combat", 1, 50, 18)
+createToggle(togglesContainer, "ViewReach",   "Combat")
 createToggle(togglesContainer, "KnifeThrow",   "Combat")
 createToggle(togglesContainer, "KillAll",      "Combat")
 
@@ -2587,8 +2587,8 @@ createToggle(togglesContainer, "Name",         "Visuals")
 createToggle(togglesContainer, "Tracer",       "Visuals")
 createToggle(togglesContainer, "XRay",         "Visuals")
 
-createCompactToggle(togglesContainer, "TpLobby", "Teleports")
-createCompactToggle(togglesContainer, "TpMap", "Teleports")
+createToggle(togglesContainer, "TpLobby", "Teleports")
+createToggle(togglesContainer, "TpMap", "Teleports")
 createToggle(togglesContainer, "TpToGun",      "Teleports")
 createToggle(togglesContainer, "SafeSpot",     "Teleports")
 
