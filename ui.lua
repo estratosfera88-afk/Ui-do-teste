@@ -42,7 +42,7 @@ local Configs = {
 local UIState = "CLOSED"
 
 local UI_TEXT = {
-	SearchPlaceholder = "Pesquisar...",
+	SearchPlaceholder = "Search...",
 	ConfirmCloseTitle = "Deseja fechar o script?",
 	ConfirmBtn        = "Sim",
 	CancelBtn         = "Não",
@@ -53,20 +53,20 @@ local UI_TEXT = {
 		Reach       = { Title = "Knife Reach",    Desc = "Aumenta o alcance da faca para eliminar jogadores à distância." },
 
 		ESP         = { Title = "Player ESP",     Desc = "Destaca jogadores através das paredes (Assassino Vermelho / Sheriff Azul / Herói Amarelo / Inocente Verde)." },
-		Speed       = { Title = "Velocidade",     Desc = "Aumenta a velocidade de movimento do seu personagem." },
-		JumpPower   = { Title = "Força de Pulo",  Desc = "Aumenta a altura do pulo do seu personagem." },
+		Speed       = { Title = "Speed",     Desc = "Aumenta a velocidade de movimento do seu personagem." },
+		JumpPower   = { Title = "Jump",  Desc = "Aumenta a altura do pulo do seu personagem." },
 		AntiFling   = { Title = "Anti-Fling",     Desc = "Desativa colisões para evitar que outros jogadores te joguem para longe." },
-		TpToGun     = { Title = "TP para Arma",   Desc = "Teleporta até a arma largada no chão (desativado automaticamente para o Assassino)." },
+		TpToGun     = { Title = "TP Gun",   Desc = "Teleporta até a arma largada no chão (desativado automaticamente para o Assassino)." },
 		TpLobby     = { Title = "Tp Lobby",       Desc = "Teleporta você para o spawn do lobby quando disponível." },
-		TpMap       = { Title = "Tp Mapa",        Desc = "Teleporta você para a área do mapa atual quando uma posição válida está disponível." },
-		SafeSpot    = { Title = "Lugar Seguro",   Desc = "Teleporta você para uma plataforma invisível no céu para ficar completamente seguro." },
+		TpMap       = { Title = "Tp Map",        Desc = "Teleporta você para a área do mapa atual quando uma posição válida está disponível." },
+		SafeSpot    = { Title = "Safe Spot",   Desc = "Teleporta você para uma plataforma invisível no céu para ficar completamente seguro." },
 		AutoFarm    = { Title = "Auto Farm",      Desc = "Coleta moedas automaticamente de forma suave, sem travar ou prender seu personagem." },
-		ChatRoles   = { Title = "Revelar Cargos", Desc = "Envia uma mensagem no chat revelando os cargos ativos na rodada." },
+		ChatRoles   = { Title = "Revel Roles", Desc = "Envia uma mensagem no chat revelando os cargos ativos na rodada." },
 		XRay        = { Title = "X-Ray",          Desc = "Visão total através de objetos e terreno." },
-		KillAll     = { Title = "Matar Todos",    Desc = "Elimina todos os jogadores de uma vez (somente se você for o Assassino)." },
-		Invisibility= { Title = "Invisibilidade", Desc = "Torna seu personagem invisível para os outros jogadores." },
-        ViewReach   = { Title = "Ver Alcance",    Desc = "Mostra a área de alcance corpo a corpo ao redor dos jogadores, incluindo Inocentes." },
-        Name        = { Title = "Nome ESP",       Desc = "Exibe os nomes dos jogadores acima dos personagens com a cor do cargo, atualiza a cada rodada." },
+		KillAll     = { Title = "Kill All",    Desc = "Elimina todos os jogadores de uma vez (somente se você for o Assassino)." },
+		Invisibility= { Title = "Invisibility", Desc = "Torna seu personagem invisível para os outros jogadores." },
+        ViewReach   = { Title = "View Reach",    Desc = "Mostra a área de alcance corpo a corpo ao redor dos jogadores, incluindo Inocentes." },
+        Name        = { Title = "Name ESP",       Desc = "Exibe os nomes dos jogadores acima dos personagens com a cor do cargo, atualiza a cada rodada." },
         Tracer      = { Title = "Tracer ESP",     Desc = "Desenha uma linha até os outros jogadores com a cor do cargo, atualiza após cada rodada." },
 	}
 }
