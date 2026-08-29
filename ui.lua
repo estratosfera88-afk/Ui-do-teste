@@ -370,6 +370,8 @@ end)
 -- ==================== FLOATING ACTION BUTTONS ====================
 local floatingButtons = {}
 local floatingDragState = nil
+local floatingActionDebounce = {}
+local FLOATING_ACTION_DEBOUNCE = 0.45
 
 -- Reserva uma área para o thumbstick móvel no canto inferior esquerdo.
 local function ClampFloatingToSafeArea(position)
@@ -471,7 +473,15 @@ UserInputService.InputEnded:Connect(function(input)
 
     if not wasDragging and root and root.Parent then
         local action = floatingButtons[buttonKey]
-        if action and action.callback then task.spawn(action.callback) end
+        local now = os.clock()
+        local last = floatingActionDebounce[buttonKey] or 0
+
+        -- Proteção contra toque duplo/acidental no mobile. Um único toque
+        -- gera no máximo uma ação dentro desta pequena janela.
+        if action and action.callback and (now - last) >= FLOATING_ACTION_DEBOUNCE then
+            floatingActionDebounce[buttonKey] = now
+            task.spawn(action.callback)
+        end
     end
 end)
 
@@ -615,6 +625,7 @@ function DestroyFloatingButton(buttonKey)
     end
 
     data.destroying = true
+    floatingActionDebounce[buttonKey] = nil
 
     if floatingDragState and floatingDragState.root == root then
         floatingDragState = nil
@@ -2031,7 +2042,7 @@ end
 local function createAction(parent, configKey, tabCategory)
     local frame = Instance.new("Frame")
     frame.Name = configKey .. "Action"
-    frame.Size = UDim2.new(1, -10, 0, 48)
+    frame.Size = UDim2.new(1, -10, 0, 42)
     frame.BackgroundColor3 = Color3.fromRGB(15, 5, 5)
     frame.BackgroundTransparency = 0.45
     frame.BorderSizePixel = 0
