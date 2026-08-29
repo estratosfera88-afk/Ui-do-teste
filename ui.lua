@@ -57,8 +57,8 @@ local UI_TEXT = {
 		JumpPower    = { Title = "Jump",          Desc = "Aumenta a altura do pulo do seu personagem." },
 		AntiFling    = { Title = "Anti-Fling",    Desc = "Desativa colisões para evitar que outros jogadores te joguem para longe." },
 		TpToGun      = { Title = "TP Gun",        Desc = "Teleporta até a arma largada no chão (desativado automaticamente para o Assassino)." },
-		TpMurder     = { Title = "Tp Murderer",   Desc = "" },
-		TpSheriff    = { Title = "Tp Sheriff",    Desc = "" },
+		TpMurder     = { Title = "Tp Murder",     Desc = "Teleporta instantaneamente até o Assassino da rodada atual." },
+		TpSheriff    = { Title = "Tp Sheriff",    Desc = "Teleporta instantaneamente até o Sheriff da rodada atual." },
 		TpLobby      = { Title = "Tp Lobby",      Desc = "Teleporta você para o spawn do lobby quando disponível." },
 		SafeSpot     = { Title = "Safe Spot",     Desc = "Teleporta você para uma plataforma invisível no céu para ficar completamente seguro." },
 		AutoFarm     = { Title = "Auto Farm",     Desc = "Coleta moedas automaticamente de forma suave, sem travar ou prender seu personagem." },
@@ -520,10 +520,9 @@ function CreateFloatingButton(buttonKey, text, side, callback)
     button.Name = "Action"
     button.Size = UDim2.fromScale(1, 1)
     button.BackgroundColor3 = Color3.fromRGB(18, 2, 4)
-    button.BackgroundTransparency = 0.08
+    button.BackgroundTransparency = 0.42
     button.BorderSizePixel = 0
     button.AutoButtonColor = false
-    button.ClipsDescendants = true
     button.Text = text
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
     button.TextSize = 17
@@ -537,22 +536,30 @@ function CreateFloatingButton(buttonKey, text, side, callback)
 
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
 
-    local gradient = Instance.new("UIGradient")
-    gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 48, 58)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(145, 0, 14)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(70, 0, 7)),
-    })
-    gradient.Rotation = 35
-    gradient.Parent = button
+    -- Uma única borda interna. Evita as pontas vermelhas que apareciam
+    -- para fora do arredondamento do botão em telas móveis.
+    root.ClipsDescendants = true
+    button.ClipsDescendants = true
+    local rootCorner = Instance.new("UICorner")
+    rootCorner.CornerRadius = UDim.new(0, 14)
+    rootCorner.Parent = root
 
     local stroke = Instance.new("UIStroke")
     stroke.Name = "CleanBorder"
-    stroke.Thickness = 1.2
-    stroke.Transparency = 0.12
-    stroke.Color = Color3.fromRGB(255, 75, 75)
+    stroke.Thickness = 1
+    stroke.Transparency = 0.18
+    stroke.Color = Color3.fromRGB(150, 20, 28)
     stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     stroke.Parent = button
+
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 55, 65)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(145, 0, 12)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(70, 0, 7)),
+    })
+    gradient.Rotation = 45
+    gradient.Parent = button
 
     local scale = Instance.new("UIScale")
     scale.Scale = 0.88
@@ -570,9 +577,9 @@ function CreateFloatingButton(buttonKey, text, side, callback)
     SetupFloatingDrag(button, root)
 
     task.spawn(function()
-        local rotation = 35
+        local rotation = 45
         while root.Parent and floatingButtons[buttonKey] and floatingButtons[buttonKey].root == root do
-            rotation = (rotation + 0.8) % 360
+            rotation = (rotation + 1.5) % 360
             if gradient and gradient.Parent then gradient.Rotation = rotation end
             task.wait(0.03)
         end
@@ -2013,6 +2020,65 @@ local function createTabBtn(tabName)
 	tabButtons[tabName] = tabBtn
 end
 
+-- ==================== CRIAR AÇÃO DE CLIQUE ====================
+-- Ações de teleporte não ficam ligadas: cada toque executa uma vez.
+local function createAction(parent, configKey, tabCategory)
+    local frame = Instance.new("Frame")
+    frame.Name = configKey .. "Action"
+    frame.Size = UDim2.new(1, -10, 0, 48)
+    frame.BackgroundColor3 = Color3.fromRGB(15, 5, 5)
+    frame.BackgroundTransparency = 0.45
+    frame.BorderSizePixel = 0
+    frame.ZIndex = 11
+    frame.ClipsDescendants = true
+    frame.LayoutOrder = ({TpMurder=1, TpSheriff=2, TpLobby=3})[configKey] or 10
+    frame:SetAttribute("Tab", tabCategory)
+    frame:SetAttribute("ConfigKey", configKey)
+    frame.Parent = parent
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
+    local title = Instance.new("TextLabel", frame)
+    title.Name = "Title"
+    title.Size = UDim2.new(1, -62, 1, 0)
+    title.Position = UDim2.new(0, 12, 0, 0)
+    title.BackgroundTransparency = 1
+    title.TextColor3 = Color3.fromRGB(220, 220, 220)
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 13
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Text = (UI_TEXT.Options[configKey] and UI_TEXT.Options[configKey].Title) or configKey
+    title.ZIndex = 12
+
+    local indicator = Instance.new("ImageLabel", frame)
+    indicator.Name = "ActionIndicator"
+    indicator.AnchorPoint = Vector2.new(1, 0.5)
+    indicator.Position = UDim2.new(1, -12, 0.5, 0)
+    indicator.Size = UDim2.fromOffset(20, 20)
+    indicator.BackgroundTransparency = 1
+    indicator.Image = "rbxthumb://type=Asset&id=130879985308294&w=150&h=150"
+    indicator.ImageColor3 = Color3.fromRGB(255, 255, 255)
+    indicator.ZIndex = 12
+
+    local hit = Instance.new("TextButton", frame)
+    hit.Name = "Action"
+    hit.Size = UDim2.fromScale(1, 1)
+    hit.BackgroundTransparency = 1
+    hit.Text = ""
+    hit.AutoButtonColor = false
+    hit.ZIndex = 13
+    hit.MouseButton1Click:Connect(function()
+        PlayUI_Click()
+        local cb = _G.AkatCallbacks and _G.AkatCallbacks[configKey]
+        if type(cb) == "function" then
+            task.spawn(function() pcall(cb, true) end)
+        end
+        local pulse = TweenService:Create(frame, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true), {BackgroundTransparency = 0.18})
+        pulse:Play()
+    end)
+
+    return frame
+end
+
 -- ==================== CRIAR TOGGLE ====================
 local function createToggle(parent, configKey, tabCategory)
 	local toggleFrame              = Instance.new("Frame")
@@ -2022,6 +2088,9 @@ local function createToggle(parent, configKey, tabCategory)
 	toggleFrame.BackgroundTransparency = 0.45
 	toggleFrame.ZIndex             = 11
 	toggleFrame.ClipsDescendants   = true
+	if tabCategory == "Teleports" then
+		toggleFrame.LayoutOrder = ({TpToGun=10, SafeSpot=11})[configKey] or 20
+	end
 	toggleFrame:SetAttribute("Tab",       tabCategory)
 	toggleFrame:SetAttribute("ConfigKey", configKey)
 	toggleFrame.Parent             = parent
@@ -2100,76 +2169,6 @@ local function createToggle(parent, configKey, tabCategory)
 		end
 		SyncFloatingButton(configKey)
 	end)
-end
-
--- ==================== BOTÃO DE AÇÃO COMPACTO ====================
--- Usado para teleports de clique único: não mantém estado e não mostra descrição.
-local function createActionButton(parent, configKey, tabCategory)
-    local frame = Instance.new("Frame")
-    frame.Name = configKey
-    frame.Size = UDim2.new(1, -10, 0, 42)
-    frame.BackgroundColor3 = Color3.fromRGB(15, 5, 5)
-    frame.BackgroundTransparency = 0.45
-    frame.BorderSizePixel = 0
-    frame.ZIndex = 11
-    frame.ClipsDescendants = true
-    frame:SetAttribute("Tab", tabCategory)
-    frame:SetAttribute("ConfigKey", configKey)
-    frame:SetAttribute("ItemHeight", 42)
-    frame.Parent = parent
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-
-    local title = Instance.new("TextLabel", frame)
-    title.Size = UDim2.new(1, -48, 1, 0)
-    title.Position = UDim2.fromOffset(12, 0)
-    title.BackgroundTransparency = 1
-    title.TextColor3 = Color3.fromRGB(225, 225, 225)
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 13
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.TextYAlignment = Enum.TextYAlignment.Center
-    title.Text = (UI_TEXT.Options[configKey] and UI_TEXT.Options[configKey].Title) or configKey
-    title.ZIndex = 12
-
-    local arrow = Instance.new("TextLabel", frame)
-    arrow.Size = UDim2.fromOffset(28, 28)
-    arrow.AnchorPoint = Vector2.new(1, 0.5)
-    arrow.Position = UDim2.new(1, -8, 0.5, 0)
-    arrow.BackgroundTransparency = 1
-    arrow.Text = ">"
-    arrow.TextColor3 = Color3.fromRGB(150, 150, 150)
-    arrow.Font = Enum.Font.GothamBold
-    arrow.TextSize = 17
-    arrow.ZIndex = 12
-
-    local hit = Instance.new("TextButton", frame)
-    hit.Size = UDim2.fromScale(1, 1)
-    hit.BackgroundTransparency = 1
-    hit.Text = ""
-    hit.AutoButtonColor = false
-    hit.ZIndex = 14
-
-    local scale = Instance.new("UIScale", frame)
-    scale.Scale = 1
-
-    hit.MouseButton1Click:Connect(function()
-        PlayUI_Click()
-        TweenService:Create(scale, TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.97}):Play()
-        task.delay(0.07, function()
-            if scale and scale.Parent then
-                TweenService:Create(scale, TweenInfo.new(0.16, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-            end
-        end)
-        TweenService:Create(arrow, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(255, 70, 70)}):Play()
-        task.delay(0.10, function()
-            if arrow and arrow.Parent then
-                TweenService:Create(arrow, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(150, 150, 150)}):Play()
-            end
-        end)
-        if _G.AkatCallbacks and type(_G.AkatCallbacks[configKey]) == "function" then
-            pcall(function() _G.AkatCallbacks[configKey](true) end)
-        end
-    end)
 end
 
 -- ==================== TOGGLE COMPACTO ====================
@@ -2613,12 +2612,12 @@ createToggle(togglesContainer, "Name",              "Visuals")
 createToggle(togglesContainer, "Tracer",            "Visuals")
 createToggle(togglesContainer, "XRay",              "Visuals")
 
--- Teleports (ações de clique único no topo)
-createActionButton(togglesContainer, "TpMurder",       "Teleports")
-createActionButton(togglesContainer, "TpSheriff",      "Teleports")
-createToggle(togglesContainer, "TpLobby",             "Teleports")
-createToggle(togglesContainer, "TpToGun",             "Teleports")
-createToggle(togglesContainer, "SafeSpot",            "Teleports")
+-- Teleports (ações de clique; Murderer/Sheriff/Lobby no topo)
+createAction(togglesContainer, "TpMurder",  "Teleports")
+createAction(togglesContainer, "TpSheriff", "Teleports")
+createAction(togglesContainer, "TpLobby",   "Teleports")
+createToggle(togglesContainer, "TpToGun",   "Teleports")
+createToggle(togglesContainer, "SafeSpot",  "Teleports")
 
 -- Settings
 createToggle(togglesContainer, "AutoFarm",          "Settings")
