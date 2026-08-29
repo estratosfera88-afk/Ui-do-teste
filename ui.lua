@@ -33,7 +33,7 @@ local Configs = {
 	XRay        = false,
 	KillAll     = false,
 	Invisibility= false,
-	ViewReach   = false,
+	ViewReach   = 5,
 	Name        = false,
 	Tracer      = false,
 	TpLobby     = false,
@@ -79,8 +79,8 @@ local originalTrans = {}
 local isConfirmOpen = false
 
 -- ==================== DIMENSIONAMENTO RESPONSIVO ====================
-local NORMAL_UI_SIZE   = Vector2.new(580, 385)
-local EXPANDED_UI_SIZE = Vector2.new(720, 405)
+local NORMAL_UI_SIZE   = Vector2.new(570, 385)
+local EXPANDED_UI_SIZE = Vector2.new(900, 405)
 local UI_SAFE_MARGIN   = 14
 
 local function GetViewportSize()
