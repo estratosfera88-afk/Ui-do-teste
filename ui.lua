@@ -1,4 +1,4 @@
--- [[ AKATSUKI UI ONLY [v5.8 - PLAYER SLIDERS / FLOATING SAFE AREA] - REFINED UNIFIED EDITION — FIXED BUILD ]]
+-- [[ AKATSUKI UI ONLY [v5.9 - PLAYER SLIDERS / FLOATING SAFE AREA] - REFINED UNIFIED EDITION — FIXED BUILD ]]
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -30,7 +30,6 @@ local Configs = {
 	SafeSpot    = false,
 	AutoFarm    = false,
 	ChatRoles   = false,
-	KnifeThrow  = false,
 	XRay        = false,
 	KillAll     = false,
 	Invisibility= false,
@@ -38,7 +37,6 @@ local Configs = {
 	Name        = false,
 	Tracer      = false,
 	TpLobby     = false,
-	TpMap       = false
 }
 
 -- ==================== DYNAMIC UI COMPONENT & STATE MACHINE ====================
@@ -62,11 +60,9 @@ local UI_TEXT = {
 		TpMurder     = { Title = "Tp Murder",     Desc = "Teleporta instantaneamente até o Assassino da rodada atual." },
 		TpSheriff    = { Title = "Tp Sheriff",    Desc = "Teleporta instantaneamente até o Sheriff da rodada atual." },
 		TpLobby      = { Title = "Tp Lobby",      Desc = "Teleporta você para o spawn do lobby quando disponível." },
-		TpMap        = { Title = "Tp Map",        Desc = "Teleporta você para a área do mapa atual quando houver uma posição válida." },
 		SafeSpot     = { Title = "Safe Spot",     Desc = "Teleporta você para uma plataforma invisível no céu para ficar completamente seguro." },
 		AutoFarm     = { Title = "Auto Farm",     Desc = "Coleta moedas automaticamente de forma suave, sem travar ou prender seu personagem." },
 		ChatRoles    = { Title = "Reveal Roles",  Desc = "Envia uma mensagem no chat revelando os cargos ativos na rodada." },
-		KnifeThrow   = { Title = "Knife Throw",   Desc = "Arremessa a faca automaticamente com precisão." },
 		XRay         = { Title = "X-Ray",         Desc = "Permite enxergar através de objetos e do terreno." },
 		KillAll      = { Title = "Kill All",      Desc = "Elimina todos os jogadores de uma vez (somente se você for o Assassino)." },
 		Invisibility = { Title = "Invisibility",  Desc = "Torna seu personagem invisível para os outros jogadores." },
@@ -83,7 +79,6 @@ local originalTrans = {}
 local isConfirmOpen = false
 
 -- ==================== DIMENSIONAMENTO RESPONSIVO ====================
--- Mantém os tamanhos originais no PC e limita a janela em telas pequenas.
 local NORMAL_UI_SIZE   = Vector2.new(580, 385)
 local EXPANDED_UI_SIZE = Vector2.new(720, 405)
 local UI_SAFE_MARGIN   = 14
@@ -96,7 +91,9 @@ local function GetViewportSize()
 	return Vector2.new(1280, 720)
 end
 
--- Mantém os botões flutuantes fora da área do thumbstick móvel.
+local FLOATING_BUTTON_SIZE = Vector2.new(150, 48)
+local FLOATING_GAP = 18
+
 local function ClampFloatingPosition(pos)
 	local vp = GetViewportSize()
 	local halfW, halfH = FLOATING_BUTTON_SIZE.X / 2, FLOATING_BUTTON_SIZE.Y / 2
@@ -374,9 +371,6 @@ end)
 local floatingButtons = {}
 local floatingDragState = nil
 
-local FLOATING_BUTTON_SIZE = Vector2.new(150, 48)
-local FLOATING_GAP = 18
-
 -- Reserva uma área para o thumbstick móvel no canto inferior esquerdo.
 local function ClampFloatingToSafeArea(position)
     local vp = GetViewportSize()
@@ -384,6 +378,7 @@ local function ClampFloatingToSafeArea(position)
     local halfH = FLOATING_BUTTON_SIZE.Y * 0.5
     local x = math.clamp(position.X, halfW + UI_SAFE_MARGIN, vp.X - halfW - UI_SAFE_MARGIN)
     local y = math.clamp(position.Y, halfH + UI_SAFE_MARGIN, vp.Y - halfH - UI_SAFE_MARGIN)
+    -- Zona reservada para o analógico do mobile (canto inferior esquerdo)
     if x < 230 and y > vp.Y - 220 then
         x = 230
         y = math.min(y, vp.Y - 230)
@@ -539,10 +534,8 @@ function CreateFloatingButton(buttonKey, text, side, callback)
     corner.CornerRadius = UDim.new(0, 14)
     corner.Parent = button
 
-    -- Texto sempre branco; nenhum UIGradient é aplicado ao texto.
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
 
-    -- O gradiente fica exclusivamente no contorno do botão.
     local stroke = Instance.new("UIStroke")
     stroke.Name = "GradientBorder"
     stroke.Thickness = 1.8
@@ -661,21 +654,6 @@ local function SyncFloatingButton(configKey)
             )
         else
             DestroyFloatingButton("AutoShoot")
-        end
-    elseif configKey == "KnifeThrow" then
-        if Configs[configKey] then
-            CreateFloatingButton(
-                "KnifeThrow",
-                "KNIFE THROW",
-                "left",
-                function()
-                    if _G.AkatCallbacks and type(_G.AkatCallbacks.KnifeThrowOnce) == "function" then
-                        _G.AkatCallbacks.KnifeThrowOnce()
-                    end
-                end
-            )
-        else
-            DestroyFloatingButton("KnifeThrow")
         end
     end
 end
@@ -886,12 +864,10 @@ end
 TabsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateTabsCanvas)
 TabsContainer:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateTabsCanvas)
 
--- ==================== ACTIVEBAR REUTILIZÁVEL (CORRIGIDA) ====================
--- Criamos um contêiner com ClipsDescendants para impedir que a ActiveBar
--- vaze por cima da barra de pesquisa e do perfil.
+-- ==================== ACTIVEBAR REUTILIZÁVEL ====================
 local ActiveBarContainer   = Instance.new("Frame", LeftPanel)
 ActiveBarContainer.Name    = "ActiveBarContainer"
-ActiveBarContainer.Size    = UDim2.new(1, -8, 1, -152) -- Mesmo tamanho e local do TabsContainer
+ActiveBarContainer.Size    = UDim2.new(1, -8, 1, -152)
 ActiveBarContainer.Position = UDim2.new(0, 4, 0, 87)
 ActiveBarContainer.BackgroundTransparency = 1
 ActiveBarContainer.ClipsDescendants = true
@@ -901,7 +877,7 @@ local sharedActiveBar      = Instance.new("Frame", ActiveBarContainer)
 sharedActiveBar.Name       = "SharedActiveBar"
 sharedActiveBar.AnchorPoint = Vector2.new(0, 0.5)
 sharedActiveBar.Size       = UDim2.new(0, 3, 0, 22)
-sharedActiveBar.Position   = UDim2.new(0, 7, 0, 0) -- 11 absoluto - 4 do container
+sharedActiveBar.Position   = UDim2.new(0, 7, 0, 0)
 sharedActiveBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 sharedActiveBar.BorderSizePixel = 0
 sharedActiveBar.Visible    = false
@@ -1261,9 +1237,6 @@ AplicarFadeSincronizado(confirmCard, true, 0)
 -- ==================== RENDERSTEP UNIFICADO ====================
 RunService.RenderStepped:Connect(function()
 	local t = os.clock()
-
-	-- Movimento contínuo e lento, sem "wrap" brusco de 359 -> 0 graus.
-	-- O efeito continua vivo, mas evita aparência de manchas/cores escorrendo.
 	SingleRedGrad.Rotation   = 90 + math.sin(t * 0.55) * 28
 	confStrokeGrad.Rotation  = 90 + math.sin(t * 0.70) * 25
 	uGrad.Rotation           = 45 + math.sin(t * 0.80) * 35
@@ -1907,7 +1880,7 @@ local function UpdateActiveBarPosition(animar)
 
 		local btnAbsSize = targetBtn.AbsoluteSize.Y
 		local btnAbsPos  = targetBtn.AbsolutePosition.Y
-		local panelAbsY  = ActiveBarContainer.AbsolutePosition.Y -- Agora pegando a posição relativa ao Container!
+		local panelAbsY  = ActiveBarContainer.AbsolutePosition.Y
 
 		if (btnAbsSize == 0 or btnAbsPos == 0 or panelAbsY == 0) and deferCount < MAX_DEFER then
 			task.defer(aplicar)
@@ -1925,7 +1898,6 @@ local function UpdateActiveBarPosition(animar)
 			)
 			moveTween:Play()
 
-			-- Pequena expansão durante a troca; volta ao normal sem criar outra barra.
 			activeBarScale.Scale = 1.08
 			TweenService:Create(
 				activeBarScale,
@@ -2120,7 +2092,6 @@ local function createToggle(parent, configKey, tabCategory)
 		toggleScale.Scale = 0.97
 		TweenService:Create(toggleScale, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Scale = 1}):Play()
 
-		-- ==================== INTEGRAÇÃO COM BACKEND ====================
 		if _G.AkatCallbacks and type(_G.AkatCallbacks[configKey]) == "function" then
 			local success, err = pcall(function()
 				_G.AkatCallbacks[configKey](Configs[configKey])
@@ -2131,7 +2102,6 @@ local function createToggle(parent, configKey, tabCategory)
 		else
 			warn("[AKAT UI] Callback not found: " .. tostring(configKey))
 		end
-		-- ==================== FIM DA INTEGRAÇÃO ====================
 		SyncFloatingButton(configKey)
 	end)
 end
@@ -2195,9 +2165,6 @@ local function createCompactToggle(parent, configKey, tabCategory)
 end
 
 -- ==================== CRIAR SLIDER NUMÉRICO COMPACTO ====================
--- Controles numéricos compactos: título + slider ficam na mesma linha.
--- O valor exibido é inteiro, enquanto o valor interno continua permitindo
--- movimentação contínua do slider.
 local function createCompactSlider(parent, configKey, tabCategory, minValue, maxValue, defaultValue)
 	local frame = Instance.new("Frame")
 	frame.Name  = configKey
@@ -2228,11 +2195,9 @@ local function createCompactSlider(parent, configKey, tabCategory, minValue, max
 	titleLbl.Text  = optData and optData.Title or configKey
 	titleLbl.ZIndex = 12
 
-	-- Track do slider: da posição 116 até -52 px da direita.
-	-- Isso deixa espaço para o value label sem sobreposição.
 	local track = Instance.new("Frame", frame)
 	track.Name  = "SliderTrack"
-	track.Size  = UDim2.new(1, -168, 0, 6)   -- -168 = 116 da esquerda + 52 do value
+	track.Size  = UDim2.new(1, -168, 0, 6)
 	track.Position = UDim2.new(0, 116, 0.5, -3)
 	track.BackgroundColor3 = Color3.fromRGB(45, 25, 27)
 	track.BorderSizePixel  = 0
@@ -2257,8 +2222,6 @@ local function createCompactSlider(parent, configKey, tabCategory, minValue, max
 	knob.ZIndex = 14
 	Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
 
-	-- Value label: posicionado à DIREITA da track, fora dela.
-	-- AnchorPoint direito garante alinhamento independente do tamanho do texto.
 	local valueLabel = Instance.new("TextLabel", frame)
 	valueLabel.Name  = "Value"
 	valueLabel.Size  = UDim2.fromOffset(46, 22)
@@ -2566,31 +2529,34 @@ createTabBtn("Teleports")
 createTabBtn("Settings")
 
 -- ==================== CRIAR TOGGLES ====================
-createCompactSlider(togglesContainer, "Speed", "Player", 16, 100, 16)
-createCompactSlider(togglesContainer, "JumpPower", "Player", 50, 150, 50)
-createToggle(togglesContainer, "AntiFling",    "Player")
-createToggle(togglesContainer, "Invisibility", "Player")
+-- Player
+createCompactSlider(togglesContainer, "Speed",      "Player", 16, 100, 16)
+createCompactSlider(togglesContainer, "JumpPower",  "Player", 50, 150, 50)
+createToggle(togglesContainer, "AntiFling",         "Player")
+createToggle(togglesContainer, "Invisibility",      "Player")
 
-createToggle(togglesContainer, "AutoShoot",    "Combat")
-createCompactSlider(togglesContainer, "Reach",        "Combat", 1, 50, 18)
-createToggle(togglesContainer, "ViewReach",   "Combat")
-createToggle(togglesContainer, "KnifeThrow",   "Combat")
-createToggle(togglesContainer, "KillAll",      "Combat")
+-- Combat (KnifeThrow REMOVIDO)
+createToggle(togglesContainer, "AutoShoot",         "Combat")
+createCompactSlider(togglesContainer, "Reach",      "Combat", 1, 50, 18)
+createToggle(togglesContainer, "ViewReach",         "Combat")
+createToggle(togglesContainer, "KillAll",           "Combat")
 
-createToggle(togglesContainer, "ESP",          "Visuals")
-createToggle(togglesContainer, "Name",         "Visuals")
-createToggle(togglesContainer, "Tracer",       "Visuals")
-createToggle(togglesContainer, "XRay",         "Visuals")
+-- Visuals
+createToggle(togglesContainer, "ESP",               "Visuals")
+createToggle(togglesContainer, "Name",              "Visuals")
+createToggle(togglesContainer, "Tracer",            "Visuals")
+createToggle(togglesContainer, "XRay",              "Visuals")
 
-createToggle(togglesContainer, "TpLobby", "Teleports")
-createToggle(togglesContainer, "TpMap", "Teleports")
-createToggle(togglesContainer, "TpMurder", "Teleports")
-createToggle(togglesContainer, "TpSheriff", "Teleports")
-createToggle(togglesContainer, "TpToGun",      "Teleports")
-createToggle(togglesContainer, "SafeSpot",     "Teleports")
+-- Teleports (TpMap REMOVIDO)
+createToggle(togglesContainer, "TpLobby",           "Teleports")
+createToggle(togglesContainer, "TpMurder",          "Teleports")
+createToggle(togglesContainer, "TpSheriff",         "Teleports")
+createToggle(togglesContainer, "TpToGun",           "Teleports")
+createToggle(togglesContainer, "SafeSpot",          "Teleports")
 
-createToggle(togglesContainer, "AutoFarm",    "Settings")
-createToggle(togglesContainer, "ChatRoles",    "Settings")
+-- Settings
+createToggle(togglesContainer, "AutoFarm",          "Settings")
+createToggle(togglesContainer, "ChatRoles",         "Settings")
 
 -- ==================== ANIMAÇÃO DE INTRODUÇÃO ====================
 local function ExecutarIntroAkat()
