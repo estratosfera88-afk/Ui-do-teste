@@ -544,13 +544,17 @@ function CreateFloatingButton(buttonKey, text, side, callback)
     rootCorner.CornerRadius = UDim.new(0, 14)
     rootCorner.Parent = root
 
-    local stroke = Instance.new("UIStroke")
-    stroke.Name = "CleanBorder"
-    stroke.Thickness = 1
-    stroke.Transparency = 0.18
-    stroke.Color = Color3.fromRGB(150, 20, 28)
-    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    stroke.Parent = button
+    -- O AUTO SHOOT não usa UIStroke: o stroke vermelho era o responsável
+    -- pelas pontas/bordas escapando para fora em alguns aparelhos móveis.
+    if buttonKey ~= "AutoShoot" then
+        local stroke = Instance.new("UIStroke")
+        stroke.Name = "CleanBorder"
+        stroke.Thickness = 1
+        stroke.Transparency = 0.18
+        stroke.Color = Color3.fromRGB(150, 20, 28)
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        stroke.Parent = button
+    end
 
     local gradient = Instance.new("UIGradient")
     gradient.Color = ColorSequence.new({
@@ -651,7 +655,9 @@ local function SyncFloatingButton(configKey)
                 "right",
                 function()
                     if _G.AkatCallbacks and type(_G.AkatCallbacks.AutoShootOnce) == "function" then
-                        pcall(_G.AkatCallbacks.AutoShootOnce)
+                        task.spawn(function()
+                            pcall(_G.AkatCallbacks.AutoShootOnce)
+                        end)
                     end
                 end
             )
