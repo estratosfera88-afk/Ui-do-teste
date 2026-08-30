@@ -1,4 +1,4 @@
--- [[ AKATSUKI UI ONLY [v5.9 - PLAYER SLIDERS / FLOATING SAFE AREA] - REFINED UNIFIED EDITION — FIXED BUILD ]]
+-- [[ AKATSUKI UI ONLY [v1.0 - STEAL A EGG EDITION] - REFINED UNIFIED EDITION ]]
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -16,27 +16,28 @@ end
 
 -- ==================== ESTADO DOS TOGGLES DA UI ====================
 local Configs = {
-	ESP         = false,
-	AutoShoot   = false,
-	Speed       = false,
-	SpeedValue  = 16,
-	JumpPower   = false,
-	JumpPowerValue = 50,
-	Reach       = false,
-	AntiFling   = false,
-	TpToGun     = false,
-	TpMurder    = false,
-	TpSheriff   = false,
-	SafeSpot    = false,
-	AutoFarm    = false,
-	ChatRoles   = false,
-	XRay        = false,
-	KillAll     = false,
-	Invisibility= false,
-	ViewReach   = false,
-	Name        = false,
-	Tracer      = false,
-	TpLobby     = false,
+	ESP              = false,
+	AutoSteal        = false,
+	StealAllAreas    = false,
+	InstantSteal     = false,
+	AutoFarmLoop     = false,
+	AutoCollect      = false,
+	RareEggTargeting = false,
+	EggPredictor     = false,
+	AutoReturnBase   = false,
+	ServerHop        = false,
+	Speed            = false,
+	SpeedValue       = 16,
+	JumpPower        = false,
+	JumpPowerValue   = 50,
+	AntiFling        = false,
+	SafeSpot         = false,
+	XRay             = false,
+	Invisibility     = false,
+	Name             = false,
+	Tracer           = false,
+	TpBase           = false,
+	TpNest           = false,
 }
 
 -- ==================== DYNAMIC UI COMPONENT & STATE MACHINE ====================
@@ -48,27 +49,28 @@ local UI_TEXT = {
 	ConfirmBtn        = "Sim",
 	CancelBtn         = "Não",
 	Intro             = '<font color="#FFFFFF">Scripts by | </font><font color="#8B0000">AKATSUKI</font>',
-	Tabs              = { Player = "Player", Combat = "Combat", Visuals = "Visuals", Teleports = "Teleports", Settings = "Settings" },
+	Tabs              = { Player = "Player", Steal = "Steal", Visuals = "Visuals", Teleports = "Teleports", Settings = "Settings" },
 	Options           = {
-		AutoShoot    = { Title = "Auto Shoot",    Desc = "Equipa a arma automaticamente e atira no Assassino detectado usando Silent Aim." },
-		Reach        = { Title = "Knife Reach",   Desc = "Aumenta o alcance da faca para eliminar jogadores à distância." },
-		ESP          = { Title = "Player ESP",    Desc = "Destaca jogadores através das paredes (Assassino=Vermelho / Sheriff=Azul / Herói=Amarelo / Inocente=Verde)." },
-		Speed        = { Title = "Speed",         Desc = "Aumenta a velocidade de movimento do seu personagem." },
-		JumpPower    = { Title = "Jump",          Desc = "Aumenta a altura do pulo do seu personagem." },
-		AntiFling    = { Title = "Anti-Fling",    Desc = "Desativa colisões para evitar que outros jogadores te joguem para longe." },
-		TpToGun      = { Title = "TP Gun",        Desc = "Teleporta até a arma largada no chão (desativado automaticamente para o Assassino)." },
-		TpMurder     = { Title = "Tp Murder",     Desc = "Teleporta instantaneamente até o Assassino da rodada atual." },
-		TpSheriff    = { Title = "Tp Sheriff",    Desc = "Teleporta instantaneamente até o Sheriff da rodada atual." },
-		TpLobby      = { Title = "Tp Lobby",      Desc = "Teleporta você para o spawn do lobby quando disponível." },
-		SafeSpot     = { Title = "Safe Spot",     Desc = "Teleporta você para uma plataforma invisível no céu para ficar completamente seguro." },
-		AutoFarm     = { Title = "Auto Farm",     Desc = "Coleta moedas automaticamente de forma suave, sem travar ou prender seu personagem." },
-		ChatRoles    = { Title = "Reveal Roles",  Desc = "Envia uma mensagem no chat revelando os cargos ativos na rodada." },
-		XRay         = { Title = "X-Ray",         Desc = "Permite enxergar através de objetos e do terreno." },
-		KillAll      = { Title = "Kill All",      Desc = "Elimina todos os jogadores de uma vez (somente se você for o Assassino)." },
-		Invisibility = { Title = "Invisibility",  Desc = "Torna seu personagem invisível para os outros jogadores." },
-		ViewReach    = { Title = "View Reach",    Desc = "Mostra a área de alcance corpo a corpo ao redor dos jogadores, incluindo Inocentes." },
-		Name         = { Title = "Name ESP",      Desc = "Exibe os nomes dos jogadores acima dos personagens com a cor do cargo e atualiza a cada rodada." },
-		Tracer       = { Title = "Tracer ESP",    Desc = "Desenha uma linha até os outros jogadores com a cor do cargo e atualiza após cada rodada." },
+		AutoSteal        = { Title = "Auto Steal",         Desc = "Rouba ovos automaticamente de qualquer área escolhida do mapa." },
+		StealAllAreas    = { Title = "Steal All Areas",    Desc = "Cicla por todas as áreas do mapa em loop para roubar ovos continuamente." },
+		InstantSteal     = { Title = "Instant Steal",      Desc = "Rouba ovos instantaneamente usando teletransporte direto até o ovo." },
+		AutoFarmLoop     = { Title = "Auto Farm Loop",     Desc = "Repete a rotina de farm selecionada automaticamente em loop infinito." },
+		AutoCollect      = { Title = "Auto Collect",       Desc = "Coleta automaticamente ovos e itens próximos sem interação manual." },
+		RareEggTargeting = { Title = "Rare Egg Target",    Desc = "Foca apenas em tipos específicos ou raridades de ovos durante o farm." },
+		EggPredictor     = { Title = "Egg Predictor",      Desc = "Mostra o conteúdo do ovo antes de chocá-lo (requer acesso a valores internos)." },
+		AutoReturnBase   = { Title = "Auto Return Base",   Desc = "Retorna automaticamente à base após cada roubo bem-sucedido de ovo." },
+		ServerHop        = { Title = "Server Hop",         Desc = "Troca de servidor automaticamente para encontrar ovos raros indisponíveis no atual." },
+		ESP              = { Title = "Player ESP",         Desc = "Destaca jogadores e ninhos de ovos através das paredes com cores distintas." },
+		Speed            = { Title = "Speed",              Desc = "Aumenta a velocidade de movimento do seu personagem." },
+		JumpPower        = { Title = "Jump",               Desc = "Aumenta a altura do pulo do seu personagem." },
+		AntiFling        = { Title = "Anti-Fling",         Desc = "Desativa colisões para evitar que outros jogadores te joguem para longe." },
+		Invisibility     = { Title = "Invisibility",       Desc = "Torna seu personagem invisível para os outros jogadores." },
+		SafeSpot         = { Title = "Safe Spot",          Desc = "Teleporta você para uma plataforma invisível no céu para ficar completamente seguro." },
+		XRay             = { Title = "X-Ray",              Desc = "Permite enxergar através de objetos e do terreno para localizar ovos." },
+		Name             = { Title = "Name ESP",           Desc = "Exibe os nomes dos jogadores acima dos personagens com cores por tipo." },
+		Tracer           = { Title = "Tracer ESP",         Desc = "Desenha uma linha até os outros jogadores e ninhos com cores distintas." },
+		TpBase           = { Title = "Tp Base",            Desc = "Teleporta você instantaneamente para a sua base/ninho principal." },
+		TpNest           = { Title = "Tp Nest",            Desc = "Teleporta até o ninho de ovos mais próximo detectado no mapa." },
 	}
 }
 
@@ -102,7 +104,6 @@ local function ClampFloatingPosition(pos)
 	local minY = halfH + 8
 	local maxY = vp.Y - halfH - 8
 
-	-- Zona reservada para o analógico virtual no canto inferior esquerdo.
 	if pos.X < 210 and pos.Y > vp.Y - 210 then
 		pos = Vector2.new(220, math.min(pos.Y, vp.Y - 230))
 	end
@@ -236,7 +237,7 @@ local FloatBtn = Instance.new("ImageButton", screenGui)
 FloatBtn.Name                = "FloatBtn"
 FloatBtn.AnchorPoint         = Vector2.new(0.5, 0.5)
 FloatBtn.Size                = UDim2.new(0, 44, 0, 44)
-FloatBtn.Position         = UDim2.new(0.06, 0, 0.2, 0)
+FloatBtn.Position            = UDim2.new(0.06, 0, 0.2, 0)
 FloatBtn.Image               = "rbxthumb://type=Asset&id=139044062702391&w=150&h=150"
 FloatBtn.BackgroundColor3    = Color3.fromRGB(15, 0, 0)
 FloatBtn.Visible             = false
@@ -278,7 +279,7 @@ FloatBtn.InputBegan:Connect(function(input)
 	end
 end)
 
-local SetUIState 
+local SetUIState
 
 -- ==================== DRAG DA JANELA PRINCIPAL ====================
 local mainWrapper         = Instance.new("Frame", screenGui)
@@ -373,14 +374,12 @@ local floatingDragState = nil
 local floatingActionDebounce = {}
 local FLOATING_ACTION_DEBOUNCE = 0.45
 
--- Reserva uma área para o thumbstick móvel no canto inferior esquerdo.
 local function ClampFloatingToSafeArea(position)
     local vp = GetViewportSize()
     local halfW = FLOATING_BUTTON_SIZE.X * 0.5
     local halfH = FLOATING_BUTTON_SIZE.Y * 0.5
     local x = math.clamp(position.X, halfW + UI_SAFE_MARGIN, vp.X - halfW - UI_SAFE_MARGIN)
     local y = math.clamp(position.Y, halfH + UI_SAFE_MARGIN, vp.Y - halfH - UI_SAFE_MARGIN)
-    -- Zona reservada para o analógico do mobile (canto inferior esquerdo)
     if x < 230 and y > vp.Y - 220 then
         x = 230
         y = math.min(y, vp.Y - 230)
@@ -428,13 +427,11 @@ local function SetupFloatingDrag(inputObject, root)
             return
         end
         if floatingDragState then return end
-
         floatingDragState = {
-            root = root,
             input = input,
-            inputType = input.UserInputType,
-            startInputPosition = input.Position,
+            root = root,
             startButtonPosition = root.Position,
+            startInputPosition = input.Position,
             dragging = false,
         }
     end)
@@ -442,18 +439,11 @@ end
 
 UserInputService.InputChanged:Connect(function(input)
     local state = floatingDragState
-    if not state or not state.root or not state.root.Parent then return end
-
-    local shouldMove
-    if state.inputType == Enum.UserInputType.MouseButton1 then
-        shouldMove = input.UserInputType == Enum.UserInputType.MouseMovement
-    else
-        shouldMove = input.UserInputType == Enum.UserInputType.Touch
-    end
-    if not shouldMove then return end
+    if not state or input ~= state.input then return end
 
     local delta = input.Position - state.startInputPosition
-    if delta.Magnitude > 5 then state.dragging = true end
+    if delta.Magnitude > 6 then state.dragging = true end
+    if not state.dragging then return end
 
     local vp = GetViewportSize()
     local startX = state.startButtonPosition.X.Offset + vp.X * state.startButtonPosition.X.Scale
@@ -476,8 +466,6 @@ UserInputService.InputEnded:Connect(function(input)
         local now = os.clock()
         local last = floatingActionDebounce[buttonKey] or 0
 
-        -- Proteção contra toque duplo/acidental no mobile. Um único toque
-        -- gera no máximo uma ação dentro desta pequena janela.
         if action and action.callback and (now - last) >= FLOATING_ACTION_DEBOUNCE then
             floatingActionDebounce[buttonKey] = now
             task.spawn(action.callback)
@@ -546,17 +534,13 @@ function CreateFloatingButton(buttonKey, text, side, callback)
 
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
 
-    -- Uma única borda interna. Evita as pontas vermelhas que apareciam
-    -- para fora do arredondamento do botão em telas móveis.
     root.ClipsDescendants = true
     button.ClipsDescendants = true
     local rootCorner = Instance.new("UICorner")
     rootCorner.CornerRadius = UDim.new(0, 14)
     rootCorner.Parent = root
 
-    -- O AUTO SHOOT não usa UIStroke: o stroke vermelho era o responsável
-    -- pelas pontas/bordas escapando para fora em alguns aparelhos móveis.
-    if buttonKey ~= "AutoShoot" then
+    if buttonKey ~= "AutoSteal" then
         local stroke = Instance.new("UIStroke")
         stroke.Name = "CleanBorder"
         stroke.Thickness = 1
@@ -658,22 +642,40 @@ function DestroyFloatingButton(buttonKey)
 end
 
 local function SyncFloatingButton(configKey)
-    if configKey == "AutoShoot" then
+    if configKey == "AutoSteal" then
         if Configs[configKey] then
             CreateFloatingButton(
-                "AutoShoot",
-                "AUTO SHOOT",
+                "AutoSteal",
+                "AUTO STEAL",
                 "right",
                 function()
-                    if _G.AkatCallbacks and type(_G.AkatCallbacks.AutoShootOnce) == "function" then
+                    if _G.AkatCallbacks and type(_G.AkatCallbacks.AutoStealOnce) == "function" then
                         task.spawn(function()
-                            pcall(_G.AkatCallbacks.AutoShootOnce)
+                            pcall(_G.AkatCallbacks.AutoStealOnce)
                         end)
                     end
                 end
             )
         else
-            DestroyFloatingButton("AutoShoot")
+            DestroyFloatingButton("AutoSteal")
+        end
+    end
+    if configKey == "InstantSteal" then
+        if Configs[configKey] then
+            CreateFloatingButton(
+                "InstantSteal",
+                "INSTANT STEAL",
+                "right",
+                function()
+                    if _G.AkatCallbacks and type(_G.AkatCallbacks.InstantStealOnce) == "function" then
+                        task.spawn(function()
+                            pcall(_G.AkatCallbacks.InstantStealOnce)
+                        end)
+                    end
+                end
+            )
+        else
+            DestroyFloatingButton("InstantSteal")
         end
     end
 end
@@ -797,7 +799,7 @@ local subtitle             = Instance.new("TextLabel", HeaderLeft)
 subtitle.Size              = UDim2.new(1, -44, 0, 12)
 subtitle.Position          = UDim2.new(0, 40, 0, 20)
 subtitle.BackgroundTransparency = 1
-subtitle.Text              = "MM2 SCRIPT | by zeni"
+subtitle.Text              = "STEAL A EGG SCRIPT | by zeni"
 subtitle.TextColor3        = Color3.fromRGB(180, 180, 180)
 subtitle.TextTransparency  = 0.2
 subtitle.TextSize          = 9.5
@@ -881,141 +883,114 @@ local function UpdateTabsCanvas()
 	TabsContainer.CanvasSize = UDim2.new(0, 0, 0, math.max(contentH, minH))
 end
 
-TabsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateTabsCanvas)
-TabsContainer:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateTabsCanvas)
-
--- ==================== ACTIVEBAR REUTILIZÁVEL ====================
+-- ==================== ACTIVE BAR (barra lateral de aba ativa) ====================
 local ActiveBarContainer   = Instance.new("Frame", LeftPanel)
 ActiveBarContainer.Name    = "ActiveBarContainer"
-ActiveBarContainer.Size    = UDim2.new(1, -8, 1, -152)
-ActiveBarContainer.Position = UDim2.new(0, 4, 0, 87)
+ActiveBarContainer.Size    = UDim2.new(0, 4, 1, -152)
+ActiveBarContainer.Position= UDim2.new(0, 0, 0, 87)
 ActiveBarContainer.BackgroundTransparency = 1
+ActiveBarContainer.ZIndex  = 20
 ActiveBarContainer.ClipsDescendants = true
-ActiveBarContainer.ZIndex  = 8
 
 local sharedActiveBar      = Instance.new("Frame", ActiveBarContainer)
-sharedActiveBar.Name       = "SharedActiveBar"
-sharedActiveBar.AnchorPoint = Vector2.new(0, 0.5)
-sharedActiveBar.Size       = UDim2.new(0, 3, 0, 22)
-sharedActiveBar.Position   = UDim2.new(0, 7, 0, 0)
-sharedActiveBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-sharedActiveBar.BorderSizePixel = 0
+sharedActiveBar.Name       = "ActiveBar"
+sharedActiveBar.Size       = UDim2.new(0, 3, 0, 26)
+sharedActiveBar.AnchorPoint= Vector2.new(0, 0.5)
+sharedActiveBar.BackgroundColor3 = Color3.fromRGB(200, 20, 30)
+sharedActiveBar.BorderSizePixel  = 0
 sharedActiveBar.Visible    = false
-sharedActiveBar.ZIndex     = 8
-sharedActiveBar.ClipsDescendants = false
+sharedActiveBar.ZIndex     = 21
 Instance.new("UICorner", sharedActiveBar).CornerRadius = UDim.new(1, 0)
 
-local activeBarScale = Instance.new("UIScale", sharedActiveBar)
-activeBarScale.Scale = 1
+local activeBarScale       = Instance.new("UIScale", sharedActiveBar)
+activeBarScale.Scale       = 1
 
-local sharedBarGrad        = Instance.new("UIGradient", sharedActiveBar)
-sharedBarGrad.Rotation     = 90
-sharedBarGrad.Color        = ColorSequence.new({
-	ColorSequenceKeypoint.new(0.0, Color3.fromRGB(120, 0, 10)),
-	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 30, 40)),
-	ColorSequenceKeypoint.new(1.0, Color3.fromRGB(120, 0, 10))
-})
-
--- ==================== USER PROFILE BADGE ====================
-local UserProfileFrame     = Instance.new("Frame", LeftPanel)
-UserProfileFrame.Size      = UDim2.new(1, -16, 0, 55)
-UserProfileFrame.Position  = UDim2.new(0, 8, 1, -63)
-UserProfileFrame.BackgroundColor3 = Color3.fromRGB(20, 12, 12)
-UserProfileFrame.BackgroundTransparency = 0.35
-UserProfileFrame.BorderSizePixel = 0
-UserProfileFrame.ZIndex    = 20
-Instance.new("UICorner", UserProfileFrame).CornerRadius = UDim.new(0, 8)
-
-local userStroke           = Instance.new("UIStroke", UserProfileFrame)
-userStroke.Thickness       = 0.9
-userStroke.Color           = Color3.fromRGB(255, 255, 255)
-local uGrad                = Instance.new("UIGradient", userStroke)
+local uGrad                = Instance.new("UIGradient", sharedActiveBar)
+uGrad.Rotation             = 90
 uGrad.Color                = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 10, 15)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 0, 0))
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 40, 50)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 0, 10))
 })
 
-local AvatarImage          = Instance.new("ImageLabel", UserProfileFrame)
-AvatarImage.Size           = UDim2.new(0, 34, 0, 34)
-AvatarImage.Position       = UDim2.new(0, 10, 0.5, -17)
-AvatarImage.BackgroundTransparency = 1
-AvatarImage.Image          = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
-AvatarImage.ZIndex         = 21
-Instance.new("UICorner", AvatarImage).CornerRadius = UDim.new(1, 0)
+-- ==================== PLAYER CARD ====================
+local PlayerCard           = Instance.new("Frame", LeftPanel)
+PlayerCard.Name            = "PlayerCard"
+PlayerCard.Size            = UDim2.new(1, -12, 0, 54)
+PlayerCard.Position        = UDim2.new(0, 6, 1, -62)
+PlayerCard.BackgroundColor3 = Color3.fromRGB(10, 3, 3)
+PlayerCard.BackgroundTransparency = 0.4
+PlayerCard.BorderSizePixel = 0
+PlayerCard.ZIndex          = 20
+Instance.new("UICorner", PlayerCard).CornerRadius = UDim.new(0, 8)
 
-local AvatarStroke         = Instance.new("UIStroke", AvatarImage)
-AvatarStroke.Thickness     = 0.9
-AvatarStroke.Color         = Color3.fromRGB(255, 255, 255)
-local avGrad               = Instance.new("UIGradient", AvatarStroke)
+local pcStroke             = Instance.new("UIStroke", PlayerCard)
+pcStroke.Thickness         = 1
+pcStroke.Color             = Color3.fromRGB(80, 10, 10)
+pcStroke.Transparency      = 0.5
+
+local avFrame              = Instance.new("Frame", PlayerCard)
+avFrame.Name               = "AvatarFrame"
+avFrame.Size               = UDim2.new(0, 38, 0, 38)
+avFrame.Position           = UDim2.new(0, 8, 0.5, -19)
+avFrame.BackgroundColor3   = Color3.fromRGB(20, 5, 5)
+avFrame.BorderSizePixel    = 0
+avFrame.ZIndex             = 21
+Instance.new("UICorner", avFrame).CornerRadius = UDim.new(1, 0)
+
+local avGrad               = Instance.new("UIGradient", avFrame)
+avGrad.Rotation            = 45
 avGrad.Color               = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 10, 15)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 0, 0))
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 20, 25)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(60,  0,  5))
 })
 
-local StatusIndicator      = Instance.new("Frame", AvatarImage)
-StatusIndicator.Size       = UDim2.new(0, 9, 0, 9)
-StatusIndicator.Position   = UDim2.new(1, -7, 1, -7)
-StatusIndicator.BackgroundColor3 = Color3.fromRGB(40, 220, 80)
-StatusIndicator.BorderSizePixel = 0
-StatusIndicator.ZIndex     = 22
-Instance.new("UICorner", StatusIndicator).CornerRadius = UDim.new(1, 0)
-local statusStroke         = Instance.new("UIStroke", StatusIndicator)
-statusStroke.Color         = Color3.fromRGB(15, 5, 5)
-statusStroke.Thickness     = 1.5
+local avImage              = Instance.new("ImageLabel", avFrame)
+avImage.Size               = UDim2.new(1, -4, 1, -4)
+avImage.Position           = UDim2.new(0, 2, 0, 2)
+avImage.BackgroundTransparency = 1
+avImage.Image              = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=60&h=60"
+avImage.ZIndex             = 22
+Instance.new("UICorner", avImage).CornerRadius = UDim.new(1, 0)
 
-local DisplayNameLabel     = Instance.new("TextLabel", UserProfileFrame)
-DisplayNameLabel.Size      = UDim2.new(1, -82, 0, 16)
-DisplayNameLabel.Position  = UDim2.new(0, 54, 0.5, -16)
+local DisplayNameLabel     = Instance.new("TextLabel", PlayerCard)
+DisplayNameLabel.Size      = UDim2.new(1, -90, 0, 16)
+DisplayNameLabel.Position  = UDim2.new(0, 54, 0, 10)
 DisplayNameLabel.BackgroundTransparency = 1
 DisplayNameLabel.Text      = player.DisplayName
 DisplayNameLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
 DisplayNameLabel.Font      = Enum.Font.GothamBold
-DisplayNameLabel.TextSize  = 13.5
+DisplayNameLabel.TextSize  = 12
 DisplayNameLabel.TextXAlignment = Enum.TextXAlignment.Left
-DisplayNameLabel.TextTruncate = Enum.TextTruncate.AtEnd
-DisplayNameLabel.ZIndex    = 21
+DisplayNameLabel.ZIndex    = 22
 
-local UsernameLabel        = Instance.new("TextLabel", UserProfileFrame)
-UsernameLabel.Size         = UDim2.new(1, -82, 0, 14)
-UsernameLabel.Position     = UDim2.new(0, 54, 0.5, 2)
+local UsernameLabel        = Instance.new("TextLabel", PlayerCard)
+UsernameLabel.Size         = UDim2.new(1, -90, 0, 12)
+UsernameLabel.Position     = UDim2.new(0, 54, 0, 28)
 UsernameLabel.BackgroundTransparency = 1
 UsernameLabel.Text         = "@" .. player.Name
-UsernameLabel.TextColor3   = Color3.fromRGB(110, 110, 110)
+UsernameLabel.TextColor3   = Color3.fromRGB(140, 140, 140)
 UsernameLabel.Font         = Enum.Font.Gotham
-UsernameLabel.TextSize     = 11.5
+UsernameLabel.TextSize     = 10
 UsernameLabel.TextXAlignment = Enum.TextXAlignment.Left
-UsernameLabel.TextTruncate = Enum.TextTruncate.AtEnd
-UsernameLabel.ZIndex       = 21
+UsernameLabel.ZIndex       = 22
 
-local PrivacyBtn           = Instance.new("ImageButton", UserProfileFrame)
-PrivacyBtn.Size            = UDim2.new(0, 20, 0, 20)
-PrivacyBtn.Position        = UDim2.new(1, -26, 0.5, -10)
-PrivacyBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-PrivacyBtn.BackgroundTransparency = 0.2
-PrivacyBtn.BorderSizePixel = 0
-PrivacyBtn.ZIndex          = 22
-PrivacyBtn.AutoButtonColor = false
-Instance.new("UICorner", PrivacyBtn).CornerRadius = UDim.new(0, 5)
-local privStroke           = Instance.new("UIStroke", PrivacyBtn)
-privStroke.Color           = Color3.fromRGB(60, 20, 20)
-privStroke.Thickness       = 1
-privStroke.Transparency    = 0.5
+local isPrivate            = false
+local PrivacyBtn           = Instance.new("TextButton", PlayerCard)
+PrivacyBtn.Size            = UDim2.new(0, 24, 0, 24)
+PrivacyBtn.AnchorPoint     = Vector2.new(1, 0.5)
+PrivacyBtn.Position        = UDim2.new(1, -8, 0.5, 0)
+PrivacyBtn.BackgroundTransparency = 1
+PrivacyBtn.Text            = ""
+PrivacyBtn.ZIndex          = 23
 
 local PrivacyIcon          = Instance.new("ImageLabel", PrivacyBtn)
-PrivacyIcon.Size           = UDim2.new(1, -6, 1, -6)
-PrivacyIcon.Position       = UDim2.new(0, 3, 0, 3)
+PrivacyIcon.Size           = UDim2.fromScale(1, 1)
 PrivacyIcon.BackgroundTransparency = 1
 PrivacyIcon.Image          = "rbxthumb://type=Asset&id=103096515071530&w=150&h=150"
-PrivacyIcon.ImageColor3    = Color3.fromRGB(255, 255, 255)
-PrivacyIcon.ZIndex         = 23
-
-local isPrivate = false
+PrivacyIcon.ZIndex         = 24
 
 PrivacyBtn.MouseButton1Click:Connect(function()
 	PlayUI_Click()
-	local flashTween = TweenService:Create(PrivacyBtn, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true), {BackgroundTransparency = 0})
-	flashTween:Play()
-
 	isPrivate = not isPrivate
 	if isPrivate then
 		PrivacyIcon.Image = "rbxthumb://type=Asset&id=85795266774996&w=150&h=150"
@@ -1106,7 +1081,7 @@ badgeStrokeGrad.Color      = ColorSequence.new({
 local BadgeText            = Instance.new("TextLabel", BadgeFrame)
 BadgeText.Size             = UDim2.new(1, 0, 1, 0)
 BadgeText.BackgroundTransparency = 1
-BadgeText.Text             = "V3.9"
+BadgeText.Text             = "V1.0"
 BadgeText.TextColor3       = Color3.fromRGB(255, 255, 255)
 BadgeText.Font             = Enum.Font.GothamBold
 BadgeText.TextSize         = 8.5
@@ -1367,40 +1342,24 @@ local function CriarNotificacao(titulo, descricao, iconeId)
 	notifCloseBtn.ZIndex           = 205
 	notifCloseBtn.BorderSizePixel  = 0
 	Instance.new("UICorner", notifCloseBtn).CornerRadius = UDim.new(0, 6)
-	local xStroke                  = Instance.new("UIStroke", notifCloseBtn)
-	xStroke.Color                  = Color3.fromRGB(80, 80, 85)
-	xStroke.Thickness              = 1
-	xStroke.Transparency           = 0.5
-
-	local xL1                      = Instance.new("Frame", notifCloseBtn)
-	xL1.AnchorPoint                = Vector2.new(0.5, 0.5)
-	xL1.Position                   = UDim2.new(0.5, 0, 0.5, 0)
-	xL1.Size                       = UDim2.new(0, 10, 0, 1.5)
-	xL1.Rotation                   = 45
-	xL1.BackgroundColor3           = Color3.fromRGB(160, 160, 165)
-	xL1.BorderSizePixel            = 0
-	xL1.ZIndex                     = 206
-	Instance.new("UICorner", xL1).CornerRadius = UDim.new(1, 0)
-	local xL2                      = Instance.new("Frame", notifCloseBtn)
-	xL2.AnchorPoint                = Vector2.new(0.5, 0.5)
-	xL2.Position                   = UDim2.new(0.5, 0, 0.5, 0)
-	xL2.Size                       = UDim2.new(0, 10, 0, 1.5)
-	xL2.Rotation                   = -45
-	xL2.BackgroundColor3           = Color3.fromRGB(160, 160, 165)
-	xL2.BorderSizePixel            = 0
-	xL2.ZIndex                     = 206
-	Instance.new("UICorner", xL2).CornerRadius = UDim.new(1, 0)
-
-	notifCloseBtn.MouseEnter:Connect(function()
-		TweenService:Create(notifCloseBtn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(160, 20, 20)}):Play()
-		TweenService:Create(xL1, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-		TweenService:Create(xL2, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-	end)
-	notifCloseBtn.MouseLeave:Connect(function()
-		TweenService:Create(notifCloseBtn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(35, 35, 38)}):Play()
-		TweenService:Create(xL1, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(160, 160, 165)}):Play()
-		TweenService:Create(xL2, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(160, 160, 165)}):Play()
-	end)
+	local xL1n                     = Instance.new("Frame", notifCloseBtn)
+	xL1n.AnchorPoint               = Vector2.new(0.5, 0.5)
+	xL1n.Position                  = UDim2.new(0.5, 0, 0.5, 0)
+	xL1n.Size                      = UDim2.new(0, 10, 0, 1.5)
+	xL1n.Rotation                  = 45
+	xL1n.BackgroundColor3          = Color3.fromRGB(160, 160, 165)
+	xL1n.BorderSizePixel           = 0
+	xL1n.ZIndex                    = 206
+	Instance.new("UICorner", xL1n).CornerRadius = UDim.new(1, 0)
+	local xL2n                     = Instance.new("Frame", notifCloseBtn)
+	xL2n.AnchorPoint               = Vector2.new(0.5, 0.5)
+	xL2n.Position                  = UDim2.new(0.5, 0, 0.5, 0)
+	xL2n.Size                      = UDim2.new(0, 10, 0, 1.5)
+	xL2n.Rotation                  = -45
+	xL2n.BackgroundColor3          = Color3.fromRGB(160, 160, 165)
+	xL2n.BorderSizePixel           = 0
+	xL2n.ZIndex                    = 206
+	Instance.new("UICorner", xL2n).CornerRadius = UDim.new(1, 0)
 
 	local progressBg               = Instance.new("Frame", notifCard)
 	progressBg.Size                = UDim2.new(1, -28, 0, 3)
@@ -1410,203 +1369,12 @@ local function CriarNotificacao(titulo, descricao, iconeId)
 	progressBg.ZIndex              = 202
 	progressBg.ClipsDescendants    = true
 	Instance.new("UICorner", progressBg).CornerRadius = UDim.new(1, 0)
-
 	local progressBar              = Instance.new("Frame", progressBg)
 	progressBar.Size               = UDim2.new(1, 0, 1, 0)
-	progressBar.Position           = UDim2.new(0, 0, 0, 0)
-	progressBar.BackgroundColor3   = Color3.fromRGB(255, 255, 255)
+	progressBar.BackgroundColor3   = Color3.fromRGB(200, 30, 30)
 	progressBar.BorderSizePixel    = 0
 	progressBar.ZIndex             = 203
 	Instance.new("UICorner", progressBar).CornerRadius = UDim.new(1, 0)
-	local progressGrad             = Instance.new("UIGradient", progressBar)
-	progressGrad.Color             = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(230, 20, 25)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 0, 0))
-	})
-
-	table.insert(ActiveNotifications, 1, notifHolder)
-	UpdateNotifications()
-
-	TweenService:Create(notifHolder, TweenInfo.new(0.30, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), {
-		Position = UDim2.new(1, -20, 1, -24)
-	}):Play()
-	TweenService:Create(notifScale, TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-		Scale = 1
-	}):Play()
-
-	local dismissed = false
-	local function DismissNotif()
-		if dismissed then return end
-		dismissed = true
-		for i, v in ipairs(ActiveNotifications) do
-			if v == notifHolder then table.remove(ActiveNotifications, i) break end
-		end
-		UpdateNotifications()
-		local slideOut = TweenInfo.new(0.25, Enum.EasingStyle.Cubic, Enum.EasingDirection.In)
-		TweenService:Create(notifHolder, slideOut, {
-			Position = UDim2.new(1, 360, notifHolder.Position.Y.Scale, notifHolder.Position.Y.Offset)
-		}):Play()
-		TweenService:Create(notifCard, slideOut, {BackgroundTransparency = 1}):Play()
-		TweenService:Create(notifScale, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-			Scale = 0.96
-		}):Play()
-		task.delay(0.28, function()
-			if notifHolder and notifHolder.Parent then notifHolder:Destroy() end
-		end)
-	end
-
-	notifCloseBtn.MouseButton1Click:Connect(function() DismissNotif() end)
-	local barTween = TweenService:Create(progressBar, TweenInfo.new(NOTIF_DURATION, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {Size = UDim2.new(0, 0, 1, 0)})
-	task.delay(0.1, function() barTween:Play() end)
-	task.delay(NOTIF_DURATION + 0.1, function() DismissNotif() end)
-end
-
--- ==================== NOTIFICAÇÃO DE LINK COPIADO ====================
-local function CriarNotificacaoLinkCopiado(texto, iconeId)
-	local notifHolder              = Instance.new("Frame", screenGui)
-	notifHolder.Name               = "NotifHolderLink"
-	notifHolder.AnchorPoint        = Vector2.new(1, 1)
-	notifHolder.Size               = UDim2.new(0, 330, 0, 64)
-	notifHolder.Position           = UDim2.new(1, 360, 1, -24)
-	notifHolder.BackgroundTransparency = 1
-	notifHolder.ZIndex             = 200
-	notifHolder.ClipsDescendants   = false
-
-	local notifScale = Instance.new("UIScale", notifHolder)
-	notifScale.Scale = 0.96
-
-	local notifCard                = Instance.new("Frame", notifHolder)
-	notifCard.Name                 = "NotifCard"
-	notifCard.Size                 = UDim2.new(1, 0, 1, 0)
-	notifCard.BackgroundColor3     = Color3.fromRGB(16, 16, 18)
-	notifCard.BackgroundTransparency = 0.25
-	notifCard.BorderSizePixel      = 0
-	notifCard.ZIndex               = 201
-	notifCard.ClipsDescendants     = false
-	Instance.new("UICorner", notifCard).CornerRadius = UDim.new(0, 16)
-
-	local notifShadow              = Instance.new("ImageLabel", notifCard)
-	notifShadow.Name               = "Shadow"
-	notifShadow.AnchorPoint        = Vector2.new(0.5, 0.5)
-	notifShadow.Position           = UDim2.new(0.5, 0, 0.5, 4)
-	notifShadow.Size               = UDim2.new(1, 24, 1, 24)
-	notifShadow.BackgroundTransparency = 1
-	notifShadow.Image              = "rbxassetid://5554831957"
-	notifShadow.ImageColor3        = Color3.fromRGB(0, 0, 0)
-	notifShadow.ImageTransparency  = 0.35
-	notifShadow.ScaleType          = Enum.ScaleType.Slice
-	notifShadow.SliceCenter        = Rect.new(36, 36, 114, 114)
-	notifShadow.ZIndex             = 200
-
-	local accentBar                = Instance.new("Frame", notifCard)
-	accentBar.Size                 = UDim2.new(0, 4, 0, 36)
-	accentBar.Position             = UDim2.new(0, 14, 0.5, -18)
-	accentBar.BackgroundColor3     = Color3.fromRGB(180, 20, 20)
-	accentBar.BorderSizePixel      = 0
-	accentBar.ZIndex               = 202
-	Instance.new("UICorner", accentBar).CornerRadius = UDim.new(1, 0)
-	local accentGrad               = Instance.new("UIGradient", accentBar)
-	accentGrad.Rotation            = 90
-	accentGrad.Color               = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(230, 30, 30)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 10, 10))
-	})
-
-	local contentContainer         = Instance.new("Frame", notifCard)
-	contentContainer.Size          = UDim2.new(1, -64, 1, -12)
-	contentContainer.Position      = UDim2.new(0, 26, 0, 6)
-	contentContainer.BackgroundTransparency = 1
-	local cLayout                  = Instance.new("UIListLayout", contentContainer)
-	cLayout.FillDirection          = Enum.FillDirection.Horizontal
-	cLayout.SortOrder              = Enum.SortOrder.LayoutOrder
-	cLayout.VerticalAlignment      = Enum.VerticalAlignment.Center
-	cLayout.HorizontalAlignment    = Enum.HorizontalAlignment.Center
-	cLayout.Padding                = UDim.new(0, 8)
-
-	local notifText                = Instance.new("TextLabel", contentContainer)
-	notifText.LayoutOrder          = 1
-	notifText.AutomaticSize        = Enum.AutomaticSize.X
-	notifText.Size                 = UDim2.new(0, 0, 0, 24)
-	notifText.BackgroundTransparency = 1
-	notifText.Text                 = texto or "LINK COPIED SUCCESSFULLY"
-	notifText.TextColor3           = Color3.fromRGB(240, 240, 240)
-	notifText.Font                 = Enum.Font.GothamBold
-	notifText.TextSize             = 15
-	notifText.TextXAlignment       = Enum.TextXAlignment.Left
-	notifText.ZIndex               = 203
-
-	if iconeId then
-		local verifyIcon           = Instance.new("ImageLabel", contentContainer)
-		verifyIcon.LayoutOrder     = 2
-		verifyIcon.Size            = UDim2.new(0, 24, 0, 24)
-		verifyIcon.BackgroundTransparency = 1
-		verifyIcon.Image           = iconeId
-		verifyIcon.ZIndex          = 204
-	end
-
-	local notifCloseBtn            = Instance.new("TextButton", notifCard)
-	notifCloseBtn.Size             = UDim2.new(0, 20, 0, 20)
-	notifCloseBtn.Position         = UDim2.new(1, -28, 0.5, -10)
-	notifCloseBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 38)
-	notifCloseBtn.BackgroundTransparency = 0.2
-	notifCloseBtn.Text             = ""
-	notifCloseBtn.ZIndex           = 205
-	notifCloseBtn.BorderSizePixel  = 0
-	Instance.new("UICorner", notifCloseBtn).CornerRadius = UDim.new(0, 6)
-	local xStroke                  = Instance.new("UIStroke", notifCloseBtn)
-	xStroke.Color                  = Color3.fromRGB(80, 80, 85)
-	xStroke.Thickness              = 1
-	xStroke.Transparency           = 0.5
-	local xL1                      = Instance.new("Frame", notifCloseBtn)
-	xL1.AnchorPoint                = Vector2.new(0.5, 0.5)
-	xL1.Position                   = UDim2.new(0.5, 0, 0.5, 0)
-	xL1.Size                       = UDim2.new(0, 8, 0, 1.5)
-	xL1.Rotation                   = 45
-	xL1.BackgroundColor3           = Color3.fromRGB(160, 160, 165)
-	xL1.BorderSizePixel            = 0
-	xL1.ZIndex                     = 206
-	Instance.new("UICorner", xL1).CornerRadius = UDim.new(1, 0)
-	local xL2                      = Instance.new("Frame", notifCloseBtn)
-	xL2.AnchorPoint                = Vector2.new(0.5, 0.5)
-	xL2.Position                   = UDim2.new(0.5, 0, 0.5, 0)
-	xL2.Size                       = UDim2.new(0, 8, 0, 1.5)
-	xL2.Rotation                   = -45
-	xL2.BackgroundColor3           = Color3.fromRGB(160, 160, 165)
-	xL2.BorderSizePixel            = 0
-	xL2.ZIndex                     = 206
-	Instance.new("UICorner", xL2).CornerRadius = UDim.new(1, 0)
-
-	notifCloseBtn.MouseEnter:Connect(function()
-		TweenService:Create(notifCloseBtn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(160, 20, 20)}):Play()
-		TweenService:Create(xL1, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-		TweenService:Create(xL2, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-	end)
-	notifCloseBtn.MouseLeave:Connect(function()
-		TweenService:Create(notifCloseBtn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(35, 35, 38)}):Play()
-		TweenService:Create(xL1, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(160, 160, 165)}):Play()
-		TweenService:Create(xL2, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(160, 160, 165)}):Play()
-	end)
-
-	local progressBg               = Instance.new("Frame", notifCard)
-	progressBg.Size                = UDim2.new(1, -28, 0, 3)
-	progressBg.Position            = UDim2.new(0, 14, 1, -8)
-	progressBg.BackgroundColor3    = Color3.fromRGB(30, 30, 35)
-	progressBg.BorderSizePixel     = 0
-	progressBg.ZIndex              = 202
-	progressBg.ClipsDescendants    = true
-	Instance.new("UICorner", progressBg).CornerRadius = UDim.new(1, 0)
-	local progressBar              = Instance.new("Frame", progressBg)
-	progressBar.Size               = UDim2.new(1, 0, 1, 0)
-	progressBar.Position           = UDim2.new(0, 0, 0, 0)
-	progressBar.BackgroundColor3   = Color3.fromRGB(255, 255, 255)
-	progressBar.BorderSizePixel    = 0
-	progressBar.ZIndex             = 203
-	Instance.new("UICorner", progressBar).CornerRadius = UDim.new(1, 0)
-	local progressGrad             = Instance.new("UIGradient", progressBar)
-	progressGrad.Color             = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(230, 20, 25)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 0, 0))
-	})
 
 	table.insert(ActiveNotifications, 1, notifHolder)
 	UpdateNotifications()
@@ -1670,7 +1438,6 @@ local function CriarNotificacaoDiscord()
 	Instance.new("UICorner", notifCard).CornerRadius = UDim.new(0, 16)
 
 	local notifShadow              = Instance.new("ImageLabel", notifCard)
-	notifShadow.Name               = "Shadow"
 	notifShadow.AnchorPoint        = Vector2.new(0.5, 0.5)
 	notifShadow.Position           = UDim2.new(0.5, 0, 0.5, 4)
 	notifShadow.Size               = UDim2.new(1, 24, 1, 24)
@@ -1729,15 +1496,8 @@ local function CriarNotificacaoDiscord()
 
 	copyBtn.MouseButton1Click:Connect(function()
 		PlayUI_Click()
-		local success = false
 		if setclipboard then
-			local ok = pcall(function()
-				setclipboard("https://discord.gg/rZuYzZ7zvt")
-			end)
-			success = ok
-		end
-		if success then
-			CriarNotificacaoLinkCopiado("LINK COPIED SUCCESSFULLY!", "rbxthumb://type=Asset&id=118293546444074&w=150&h=150")
+			pcall(function() setclipboard("https://discord.gg/rZuYzZ7zvt") end)
 		end
 	end)
 
@@ -1750,39 +1510,6 @@ local function CriarNotificacaoDiscord()
 	notifCloseBtn.ZIndex           = 205
 	notifCloseBtn.BorderSizePixel  = 0
 	Instance.new("UICorner", notifCloseBtn).CornerRadius = UDim.new(0, 6)
-	local xStroke                  = Instance.new("UIStroke", notifCloseBtn)
-	xStroke.Color                  = Color3.fromRGB(80, 80, 85)
-	xStroke.Thickness              = 1
-	xStroke.Transparency           = 0.5
-	local xL1                      = Instance.new("Frame", notifCloseBtn)
-	xL1.AnchorPoint                = Vector2.new(0.5, 0.5)
-	xL1.Position                   = UDim2.new(0.5, 0, 0.5, 0)
-	xL1.Size                       = UDim2.new(0, 10, 0, 1.5)
-	xL1.Rotation                   = 45
-	xL1.BackgroundColor3           = Color3.fromRGB(160, 160, 165)
-	xL1.BorderSizePixel            = 0
-	xL1.ZIndex                     = 206
-	Instance.new("UICorner", xL1).CornerRadius = UDim.new(1, 0)
-	local xL2                      = Instance.new("Frame", notifCloseBtn)
-	xL2.AnchorPoint                = Vector2.new(0.5, 0.5)
-	xL2.Position                   = UDim2.new(0.5, 0, 0.5, 0)
-	xL2.Size                       = UDim2.new(0, 10, 0, 1.5)
-	xL2.Rotation                   = -45
-	xL2.BackgroundColor3           = Color3.fromRGB(160, 160, 165)
-	xL2.BorderSizePixel            = 0
-	xL2.ZIndex                     = 206
-	Instance.new("UICorner", xL2).CornerRadius = UDim.new(1, 0)
-
-	notifCloseBtn.MouseEnter:Connect(function()
-		TweenService:Create(notifCloseBtn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(160, 20, 20)}):Play()
-		TweenService:Create(xL1, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-		TweenService:Create(xL2, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-	end)
-	notifCloseBtn.MouseLeave:Connect(function()
-		TweenService:Create(notifCloseBtn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(35, 35, 38)}):Play()
-		TweenService:Create(xL1, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(160, 160, 165)}):Play()
-		TweenService:Create(xL2, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(160, 160, 165)}):Play()
-	end)
 
 	local progressBg               = Instance.new("Frame", notifCard)
 	progressBg.Size                = UDim2.new(1, -28, 0, 3)
@@ -1794,16 +1521,10 @@ local function CriarNotificacaoDiscord()
 	Instance.new("UICorner", progressBg).CornerRadius = UDim.new(1, 0)
 	local progressBar              = Instance.new("Frame", progressBg)
 	progressBar.Size               = UDim2.new(1, 0, 1, 0)
-	progressBar.Position           = UDim2.new(0, 0, 0, 0)
-	progressBar.BackgroundColor3   = Color3.fromRGB(255, 255, 255)
+	progressBar.BackgroundColor3   = Color3.fromRGB(88, 101, 242)
 	progressBar.BorderSizePixel    = 0
 	progressBar.ZIndex             = 203
 	Instance.new("UICorner", progressBar).CornerRadius = UDim.new(1, 0)
-	local progressGrad             = Instance.new("UIGradient", progressBar)
-	progressGrad.Color             = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(88, 101, 242)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 30, 100))
-	})
 
 	table.insert(ActiveNotifications, 1, notifHolder)
 	UpdateNotifications()
@@ -1811,9 +1532,7 @@ local function CriarNotificacaoDiscord()
 	TweenService:Create(notifHolder, TweenInfo.new(0.30, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), {
 		Position = UDim2.new(1, -20, 1, -24)
 	}):Play()
-	TweenService:Create(notifScale, TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-		Scale = 1
-	}):Play()
+	TweenService:Create(notifScale, TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Scale = 1}):Play()
 
 	local dismissed = false
 	local function DismissNotif()
@@ -1823,13 +1542,8 @@ local function CriarNotificacaoDiscord()
 			if v == notifHolder then table.remove(ActiveNotifications, i) break end
 		end
 		UpdateNotifications()
-		local slideOut = TweenInfo.new(0.25, Enum.EasingStyle.Cubic, Enum.EasingDirection.In)
-		TweenService:Create(notifHolder, slideOut, {
+		TweenService:Create(notifHolder, TweenInfo.new(0.25, Enum.EasingStyle.Cubic, Enum.EasingDirection.In), {
 			Position = UDim2.new(1, 360, notifHolder.Position.Y.Scale, notifHolder.Position.Y.Offset)
-		}):Play()
-		TweenService:Create(notifCard, slideOut, {BackgroundTransparency = 1}):Play()
-		TweenService:Create(notifScale, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-			Scale = 0.96
 		}):Play()
 		task.delay(0.28, function()
 			if notifHolder and notifHolder.Parent then notifHolder:Destroy() end
@@ -1850,7 +1564,7 @@ local function filterToggles(currentActiveTab, query)
 	local itemIndex   = 0
 	for _, child in ipairs(togglesContainer:GetChildren()) do
 		if child:IsA("Frame") and child.Name ~= "UIListLayout" and child.Name ~= "UIPadding" then
-			local itemTab       = child:GetAttribute("Tab") or "Combat"
+			local itemTab       = child:GetAttribute("Tab") or "Steal"
 			local shouldBeVisible = false
 			if searchQuery ~= "" then
 				local titleLabel = child:FindFirstChild("Title")
@@ -1911,19 +1625,13 @@ local function UpdateActiveBarPosition(animar)
 		local targetYPos    = targetCenterY - panelAbsY
 
 		if animar then
-			local moveTween = TweenService:Create(
+			TweenService:Create(
 				sharedActiveBar,
 				TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 				{Position = UDim2.new(0, 7, 0, targetYPos)}
-			)
-			moveTween:Play()
-
-			activeBarScale.Scale = 1.08
-			TweenService:Create(
-				activeBarScale,
-				TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-				{Scale = 1}
 			):Play()
+			activeBarScale.Scale = 1.08
+			TweenService:Create(activeBarScale, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
 		else
 			sharedActiveBar.Position = UDim2.new(0, 7, 0, targetYPos)
 			activeBarScale.Scale = 1
@@ -1987,45 +1695,48 @@ local function createTabBtn(tabName)
 
 	local iconContainer        = Instance.new("Frame", tabBtn)
 	iconContainer.Name         = "Icon"
-	iconContainer.Size         = UDim2.new(0, 14, 0, 14)
-	iconContainer.Position     = UDim2.new(0, 14, 0.5, -7)
+	iconContainer.Size         = UDim2.new(0, 20, 0, 20)
+	iconContainer.Position     = UDim2.new(0, 10, 0.5, -10)
 	iconContainer.BackgroundTransparency = 1
 	iconContainer.ZIndex       = 12
-	local imageLabel           = Instance.new("ImageLabel", iconContainer)
-	imageLabel.Name            = "AccentImage"
-	imageLabel.Size            = UDim2.new(1, 0, 1, 0)
-	imageLabel.BackgroundTransparency = 1
-	imageLabel.ZIndex          = 13
-	imageLabel.ImageColor3     = Color3.fromRGB(150, 150, 150)
 
-	if tabName == "Player"     then imageLabel.Image = "rbxthumb://type=Asset&id=71234705040146&w=150&h=150"
-	elseif tabName == "Teleports" then imageLabel.Image = "rbxthumb://type=Asset&id=131082536388353&w=150&h=150"
-	elseif tabName == "Settings"  then imageLabel.Image = "rbxthumb://type=Asset&id=88409765080516&w=150&h=150"
-	elseif tabName == "Visuals"   then imageLabel.Image = "rbxthumb://type=Asset&id=97681798175944&w=150&h=150"
-	elseif tabName == "Combat"    then imageLabel.Image = "rbxthumb://type=Asset&id=105897102093789&w=150&h=150" end
+	local accentImage          = Instance.new("ImageLabel", iconContainer)
+	accentImage.Name           = "AccentImage"
+	accentImage.Size           = UDim2.fromScale(1, 1)
+	accentImage.BackgroundTransparency = 1
+	accentImage.ImageColor3    = Color3.fromRGB(150, 150, 150)
+	accentImage.ZIndex         = 13
+	-- Ícones por aba
+	local tabIcons = {
+		Player     = "rbxthumb://type=Asset&id=130023302977303&w=150&h=150",
+		Steal      = "rbxthumb://type=Asset&id=130879985308294&w=150&h=150",
+		Visuals    = "rbxthumb://type=Asset&id=77207327782698&w=150&h=150",
+		Teleports  = "rbxthumb://type=Asset&id=118293546444074&w=150&h=150",
+		Settings   = "rbxthumb://type=Asset&id=95792704700534&w=150&h=150",
+	}
+	accentImage.Image          = tabIcons[tabName] or ""
 
-	local tabLabel             = Instance.new("TextLabel", tabBtn)
-	tabLabel.Name              = "Label"
-	tabLabel.Size              = UDim2.new(1, -42, 1, 0)
-	tabLabel.Position          = UDim2.new(0, 38, 0, 0)
-	tabLabel.BackgroundTransparency = 1
-	tabLabel.TextColor3        = Color3.fromRGB(150, 150, 150)
-	tabLabel.Font              = Enum.Font.GothamMedium
-	tabLabel.TextSize          = 13
-	tabLabel.TextXAlignment    = Enum.TextXAlignment.Left
-	tabLabel.Text              = UI_TEXT.Tabs[tabName] or tabName
-	tabLabel.ZIndex            = 12
+	local labelTxt             = Instance.new("TextLabel", tabBtn)
+	labelTxt.Name              = "Label"
+	labelTxt.Size              = UDim2.new(1, -38, 1, 0)
+	labelTxt.Position          = UDim2.new(0, 36, 0, 0)
+	labelTxt.BackgroundTransparency = 1
+	labelTxt.Font              = Enum.Font.GothamMedium
+	labelTxt.TextSize          = 13
+	labelTxt.TextColor3        = Color3.fromRGB(150, 150, 150)
+	labelTxt.TextXAlignment    = Enum.TextXAlignment.Left
+	labelTxt.Text              = UI_TEXT.Tabs[tabName] or tabName
+	labelTxt.ZIndex            = 12
 
-	local tabScale = Instance.new("UIScale", tabBtn)
-	tabScale.Scale = 1
+	local tabScale             = Instance.new("UIScale", tabBtn)
+	tabScale.Scale             = 1
 
 	tabBtn.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1
 			or input.UserInputType == Enum.UserInputType.Touch then
-			TweenService:Create(tabScale, TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.97}):Play()
+			TweenService:Create(tabScale, TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.95}):Play()
 		end
 	end)
-
 	tabBtn.InputEnded:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1
 			or input.UserInputType == Enum.UserInputType.Touch then
@@ -2038,7 +1749,6 @@ local function createTabBtn(tabName)
 end
 
 -- ==================== CRIAR AÇÃO DE CLIQUE ====================
--- Ações de teleporte não ficam ligadas: cada toque executa uma vez.
 local function createAction(parent, configKey, tabCategory)
     local frame = Instance.new("Frame")
     frame.Name = configKey .. "Action"
@@ -2048,9 +1758,10 @@ local function createAction(parent, configKey, tabCategory)
     frame.BorderSizePixel = 0
     frame.ZIndex = 11
     frame.ClipsDescendants = true
-    frame.LayoutOrder = ({TpMurder=1, TpSheriff=2, TpLobby=3})[configKey] or 10
+    frame.LayoutOrder = ({TpBase=1, TpNest=2})[configKey] or 10
     frame:SetAttribute("Tab", tabCategory)
     frame:SetAttribute("ConfigKey", configKey)
+    frame:SetAttribute("ItemHeight", 42)
     frame.Parent = parent
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
 
@@ -2105,9 +1816,6 @@ local function createToggle(parent, configKey, tabCategory)
 	toggleFrame.BackgroundTransparency = 0.45
 	toggleFrame.ZIndex             = 11
 	toggleFrame.ClipsDescendants   = true
-	if tabCategory == "Teleports" then
-		toggleFrame.LayoutOrder = ({TpToGun=10, SafeSpot=11})[configKey] or 20
-	end
 	toggleFrame:SetAttribute("Tab",       tabCategory)
 	toggleFrame:SetAttribute("ConfigKey", configKey)
 	toggleFrame.Parent             = parent
@@ -2186,64 +1894,6 @@ local function createToggle(parent, configKey, tabCategory)
 		end
 		SyncFloatingButton(configKey)
 	end)
-end
-
--- ==================== TOGGLE COMPACTO ====================
-local function createCompactToggle(parent, configKey, tabCategory)
-    local frame = Instance.new("Frame")
-    frame.Name = configKey
-    frame.Size = UDim2.new(1, -10, 0, 42)
-    frame.BackgroundColor3 = Color3.fromRGB(15, 5, 5)
-    frame.BackgroundTransparency = 0.45
-    frame.ZIndex = 11
-    frame.ClipsDescendants = true
-    frame:SetAttribute("Tab", tabCategory)
-    frame:SetAttribute("ConfigKey", configKey)
-    frame:SetAttribute("ItemHeight", 42)
-    frame.Parent = parent
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-
-    local title = Instance.new("TextLabel", frame)
-    title.Size = UDim2.new(1, -78, 1, 0)
-    title.Position = UDim2.fromOffset(12, 0)
-    title.BackgroundTransparency = 1
-    title.TextColor3 = Color3.fromRGB(210,210,210)
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 13
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.TextYAlignment = Enum.TextYAlignment.Center
-    title.Text = (UI_TEXT.Options[configKey] and UI_TEXT.Options[configKey].Title) or configKey
-    title.ZIndex = 12
-
-    local track = Instance.new("Frame", frame)
-    track.Size = UDim2.fromOffset(42, 22)
-    track.Position = UDim2.new(1, -52, 0.5, -11)
-    track.BackgroundColor3 = Configs[configKey] and Color3.fromHex("#8B0000") or Color3.fromRGB(30,30,30)
-    track.ZIndex = 12
-    Instance.new("UICorner", track).CornerRadius = UDim.new(1,0)
-
-    local circle = Instance.new("Frame", track)
-    circle.Size = UDim2.fromOffset(16,16)
-    circle.Position = Configs[configKey] and UDim2.new(1,-18,0.5,-8) or UDim2.new(0,2,0.5,-8)
-    circle.BackgroundColor3 = Color3.fromRGB(255,255,255)
-    circle.ZIndex = 13
-    Instance.new("UICorner", circle).CornerRadius = UDim.new(1,0)
-
-    local hit = Instance.new("TextButton", frame)
-    hit.Size = UDim2.fromScale(1,1)
-    hit.BackgroundTransparency = 1
-    hit.Text = ""
-    hit.ZIndex = 14
-    hit.MouseButton1Click:Connect(function()
-        PlayUI_Click()
-        Configs[configKey] = not Configs[configKey]
-        local on = Configs[configKey]
-        TweenService:Create(circle, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = on and UDim2.new(1,-18,0.5,-8) or UDim2.new(0,2,0.5,-8)}):Play()
-        TweenService:Create(track, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = on and Color3.fromHex("#8B0000") or Color3.fromRGB(30,30,30)}):Play()
-        if _G.AkatCallbacks and type(_G.AkatCallbacks[configKey]) == "function" then
-            pcall(function() _G.AkatCallbacks[configKey](on) end)
-        end
-    end)
 end
 
 -- ==================== CRIAR SLIDER NUMÉRICO COMPACTO ====================
@@ -2473,7 +2123,6 @@ SetUIState = function(newState)
 
 	elseif newState == "MINIMIZED" or newState == "CLOSED" then
 		AplicarFadeSincronizado(mainWrapper, true, tempoAnim)
-		local normalSize = select(1, GetResponsiveUISizes())
 		local vp = GetViewportSize()
 		local shrinkSize = UDim2.fromOffset(
 			math.min(NORMAL_UI_SIZE.X, math.max(1, vp.X - (UI_SAFE_MARGIN * 2))),
@@ -2605,23 +2254,29 @@ AplicarClickFlash(CloseBtn,    CloseIcon)
 
 -- ==================== CRIAR ABAS ====================
 createTabBtn("Player")
-createTabBtn("Combat")
+createTabBtn("Steal")
 createTabBtn("Visuals")
 createTabBtn("Teleports")
 createTabBtn("Settings")
 
 -- ==================== CRIAR TOGGLES ====================
+
 -- Player
 createCompactSlider(togglesContainer, "Speed",      "Player", 16, 100, 16)
 createCompactSlider(togglesContainer, "JumpPower",  "Player", 50, 150, 50)
 createToggle(togglesContainer, "AntiFling",         "Player")
 createToggle(togglesContainer, "Invisibility",      "Player")
 
--- Combat (KnifeThrow REMOVIDO)
-createToggle(togglesContainer, "AutoShoot",         "Combat")
-createCompactSlider(togglesContainer, "Reach",      "Combat", 1, 50, 5)
-createToggle(togglesContainer, "ViewReach",         "Combat")
-createToggle(togglesContainer, "KillAll",           "Combat")
+-- Steal
+createToggle(togglesContainer, "AutoSteal",         "Steal")
+createToggle(togglesContainer, "StealAllAreas",     "Steal")
+createToggle(togglesContainer, "InstantSteal",      "Steal")
+createToggle(togglesContainer, "AutoFarmLoop",      "Steal")
+createToggle(togglesContainer, "AutoCollect",       "Steal")
+createToggle(togglesContainer, "RareEggTargeting",  "Steal")
+createToggle(togglesContainer, "EggPredictor",      "Steal")
+createToggle(togglesContainer, "AutoReturnBase",    "Steal")
+createToggle(togglesContainer, "ServerHop",         "Steal")
 
 -- Visuals
 createToggle(togglesContainer, "ESP",               "Visuals")
@@ -2629,16 +2284,12 @@ createToggle(togglesContainer, "Name",              "Visuals")
 createToggle(togglesContainer, "Tracer",            "Visuals")
 createToggle(togglesContainer, "XRay",              "Visuals")
 
--- Teleports (ações de clique; Murderer/Sheriff/Lobby no topo)
-createAction(togglesContainer, "TpMurder",  "Teleports")
-createAction(togglesContainer, "TpSheriff", "Teleports")
-createAction(togglesContainer, "TpLobby",   "Teleports")
-createToggle(togglesContainer, "TpToGun",   "Teleports")
-createToggle(togglesContainer, "SafeSpot",  "Teleports")
+-- Teleports (ações de clique no topo)
+createAction(togglesContainer, "TpBase",   "Teleports")
+createAction(togglesContainer, "TpNest",   "Teleports")
+createToggle(togglesContainer, "SafeSpot", "Teleports")
 
--- Settings
-createToggle(togglesContainer, "AutoFarm",          "Settings")
-createToggle(togglesContainer, "ChatRoles",         "Settings")
+-- Settings (vazio por ora - pode ser estendido)
 
 -- ==================== ANIMAÇÃO DE INTRODUÇÃO ====================
 local function ExecutarIntroAkat()
@@ -2721,7 +2372,7 @@ local function ExecutarIntroAkat()
 
 	CriarNotificacao(
 		"AKATSUKI SCRIPTS",
-		"MM2 Script iniciado com sucesso. Bem-vindo, " .. player.DisplayName .. "."
+		"Steal a Egg Script iniciado. Bem-vindo, " .. player.DisplayName .. "."
 	)
 
 	task.wait(0.8)
