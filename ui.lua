@@ -2066,16 +2066,6 @@ local function createAction(parent, configKey, tabCategory)
     title.Text = (UI_TEXT.Options[configKey] and UI_TEXT.Options[configKey].Title) or configKey
     title.ZIndex = 12
 
-    local indicator = Instance.new("ImageLabel", frame)
-    indicator.Name = "ActionIndicator"
-    indicator.AnchorPoint = Vector2.new(1, 0.5)
-    indicator.Position = UDim2.new(1, -12, 0.5, 0)
-    indicator.Size = UDim2.fromOffset(20, 20)
-    indicator.BackgroundTransparency = 1
-    indicator.Image = "rbxthumb://type=Asset&id=130879985308294&w=150&h=150"
-    indicator.ImageColor3 = Color3.fromRGB(255, 255, 255)
-    indicator.ZIndex = 12
-
     local hit = Instance.new("TextButton", frame)
     hit.Name = "Action"
     hit.Size = UDim2.fromScale(1, 1)
