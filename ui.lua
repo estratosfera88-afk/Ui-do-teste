@@ -1,4 +1,4 @@
--- [[ AKATSUKI UI ONLY [v6.0 - BLOX FRUITS FARM PANEL] - REFINED UNIFIED EDITION — FIXED BUILD ]]
+-- [[ AKATSUKI UI ONLY [v1.0 - BLOX FRUITS EDITION] - REFINED UNIFIED EDITION ]]
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -16,35 +16,55 @@ end
 
 -- ==================== ESTADO DOS TOGGLES DA UI ====================
 local Configs = {
-	ESP              = false,
-	Name             = false,
-	Tracer           = false,
-	XRay             = false,
+	-- Farm Level
+	AutoFarmLevel    = false,
+	-- Farm Boss
+	AutoFarmBoss     = false,
+	AutoCollectDrops = false,
+	AutoSkills       = false,
+	-- Farm Mastery
+	AutoFarmMastery  = false,
+	SmartTargeting   = true,
+	-- Farm Materials
+	AutoFarmMaterials = false,
+	-- Farm Chests
+	AutoFarmChests   = false,
+	-- Mob Aura
+	MobAura          = false,
+	AuraRange        = 30,
+	-- Auto Quest
+	AutoQuest        = false,
+	-- Player
 	Speed            = false,
 	SpeedValue       = 16,
 	JumpPower        = false,
 	JumpPowerValue   = 50,
-	AntiFling        = false,
-	Invisibility     = false,
-	AutoFarmLevel    = false,
-	AutoFarmBoss     = false,
-	AutoFarmMastery  = false,
-	AutoFruitMastery = false,
-	AutoGunMastery   = false,
-	AutoSwordMastery = false,
-	AutoBones        = false,
-	AutoMaterials    = false,
-	AutoChests       = false,
-	MobAura          = false,
-	AutoSkills       = false,
-	SafeFarm         = true,
-	FarmWorld        = "First Sea",
-	BossTarget       = "Auto",
-	MasteryWeapon    = "Auto",
-	MaterialTarget   = "Bones",
-	MobRadius        = 35,
-	TeleportDelay    = 0.20,
-	Debug            = false,
+}
+
+-- ==================== DADOS DO JOGO ====================
+local BOSS_LIST = {
+	"Gorilla King",
+	"Saber Expert",
+	"Vice Admiral",
+	"Warden",
+	"Chief Warden",
+	"Swan",
+	"Yeti",
+	"Mob Leader",
+	"Greybeard",
+	"Wysper",
+	"Thunder God",
+}
+
+local MASTERY_TYPES = { "Fruit", "Gun", "Sword" }
+local MATERIAL_TYPES = { "Bones", "Materials", "All" }
+local DISTANCE_OPTIONS = { "Very Close", "Close", "Medium", "Far", "Custom" }
+
+-- Estado dos dropdowns
+local DropdownState = {
+	SelectedBoss      = BOSS_LIST[1],
+	MasteryType       = "Fruit",
+	MaterialTarget    = "Bones",
 }
 
 -- ==================== DYNAMIC UI COMPONENT & STATE MACHINE ====================
@@ -56,50 +76,54 @@ local UI_TEXT = {
 	ConfirmBtn        = "Sim",
 	CancelBtn         = "Não",
 	Intro             = '<font color="#FFFFFF">Scripts by | </font><font color="#8B0000">AKATSUKI</font>',
-	Tabs              = {
-		Farming = "Farming",
-		Combat = "Combat",
-		Visuals = "Visuals",
-		Teleports = "Teleports",
-		Settings = "Settings",
+	Tabs = {
+		Main     = "Main",
+		Boss     = "Boss",
+		Mastery  = "Mastery",
+		Farm     = "Farm Settings",
+		Player   = "Player",
 	},
 	Options = {
-		AutoFarmLevel    = { Title = "Auto Farm Level",    Desc = "Aceita quests, encontra o grupo de mobs correto e repete o ciclo automaticamente." },
-		AutoFarmBoss     = { Title = "Auto Farm Boss",     Desc = "Procura o boss selecionado, ataca com a arma equipada e repete após o respawn." },
-		AutoFarmMastery  = { Title = "Auto Farm Mastery",  Desc = "Farma mastery com alvo inteligente para Fruit, Gun ou Sword." },
-		AutoFruitMastery = { Title = "Auto Fruit Mastery", Desc = "Prioriza habilidades do fruto selecionado para acumular mastery." },
-		AutoGunMastery   = { Title = "Auto Gun Mastery",   Desc = "Usa a gun selecionada contra alvos com vida suficiente para não desperdiçar dano." },
-		AutoSwordMastery = { Title = "Auto Sword Mastery", Desc = "Equipa a espada selecionada e usa ataques em loop contra mobs adequados." },
-		AutoBones        = { Title = "Auto Farm Bones",    Desc = "Procura mobs que concedem Bones e coleta o recurso automaticamente." },
-		AutoMaterials    = { Title = "Auto Farm Materials",Desc = "Seleciona materiais disponíveis e procura os mobs/itens correspondentes." },
-		AutoChests       = { Title = "Auto Farm Chests",   Desc = "Vasculha o mapa por baús e coleta os pontos encontrados." },
-		MobAura          = { Title = "Mob Aura",            Desc = "Mantém o personagem próximo dos mobs e executa o ataque automaticamente." },
-		AutoSkills       = { Title = "Auto Skills",         Desc = "Executa habilidades disponíveis do fruto/arma em ciclo controlado." },
-		SafeFarm         = { Title = "Safe Farm",           Desc = "Usa pausas e limites de teleporte para reduzir travamentos e reposicionamentos excessivos." },
-		AntiFling        = { Title = "Anti-Fling",          Desc = "Reduz efeitos de física que podem lançar o personagem para longe." },
-		Invisibility     = { Title = "Invisibility",       Desc = "Torna o personagem localmente invisível." },
-		ESP              = { Title = "NPC / Player ESP",   Desc = "Destaca alvos e jogadores para facilitar a visualização durante o farm." },
-		Name             = { Title = "Name ESP",            Desc = "Exibe nomes dos jogadores e NPCs próximos." },
-		Tracer           = { Title = "Tracer ESP",          Desc = "Desenha linhas até jogadores e alvos encontrados." },
-		XRay             = { Title = "X-Ray",               Desc = "Aumenta a transparência local de partes do mapa." },
-		Speed             = { Title = "Speed",              Desc = "Ajusta a velocidade do personagem fora do farm." },
-		JumpPower         = { Title = "Jump",               Desc = "Ajusta a força do pulo do personagem." },
-		TpNearestMob      = { Title = "TP Nearest Mob",     Desc = "Teleporta uma vez para o NPC hostil mais próximo." },
-		TpBoss            = { Title = "TP Boss",            Desc = "Teleporta uma vez para o boss atualmente selecionado." },
-		TpChest           = { Title = "TP Chest",            Desc = "Teleporta uma vez para o baú detectado mais próximo." },
-		TpSafe            = { Title = "TP Safe Farm Spot",  Desc = "Reposiciona para um ponto seguro próximo do alvo atual." },
-	},
+		-- Main
+		AutoFarmLevel    = { Title = "Auto Farm Level",    Desc = "Farm automático de nível. Detecta a ilha/quest correta e eleva seu nível automaticamente." },
+		AutoFarmBoss     = { Title = "Auto Farm Boss",     Desc = "Ativa o farm de boss. Selecione o boss no painel Boss." },
+		AutoFarmMastery  = { Title = "Auto Farm Mastery",  Desc = "Farm automático de mastery. Usa habilidades no tipo selecionado (Fruit/Gun/Sword)." },
+		AutoFarmMaterials= { Title = "Auto Farm Materials",Desc = "Farm automático de Bones, Materials e drops de NPCs." },
+		AutoFarmChests   = { Title = "Auto Farm Chests",   Desc = "Percorre ilhas coletando baús automaticamente." },
+		-- Boss
+		AutoCollectDrops = { Title = "Auto Collect Drops", Desc = "Coleta drops automaticamente após derrotar o boss." },
+		-- Mastery
+		SmartTargeting   = { Title = "Smart Targeting",    Desc = "Seleciona mobs com HP suficiente para maximizar ganho de mastery sem matar instantaneamente." },
+		-- Farm Settings
+		MobAura          = { Title = "Mob Aura",           Desc = "Aura que ataca automaticamente NPCs dentro do alcance configurado." },
+		AutoQuest        = { Title = "Auto Quest",         Desc = "Aceita, completa e entrega quests automaticamente conforme seu nível." },
+		AutoSkills       = { Title = "Auto Skills",        Desc = "Usa habilidades do Fruit/Sword/Gun automaticamente durante o farm." },
+		-- Player
+		Speed            = { Title = "Speed",              Desc = "Aumenta a velocidade de movimento do personagem." },
+		JumpPower        = { Title = "Jump Power",         Desc = "Aumenta a altura do pulo do personagem." },
+	}
 }
 
-local activeTab     = "Player"
+local activeTab     = "Main"
 local tabButtons    = {}
 local isExpanded    = false
 local originalTrans = {}
 local isConfirmOpen = false
 
+-- ==================== STATUS DE FARM ====================
+local statusLabel   = nil   -- Será definido após criação da UI
+
+local function UpdateStatusLabel()
+	if not statusLabel or not statusLabel.Parent then return end
+	local s = _G.BFFarmStatus or "Idle"
+	pcall(function()
+		statusLabel.Text = "● " .. s
+	end)
+end
+
 -- ==================== DIMENSIONAMENTO RESPONSIVO ====================
-local NORMAL_UI_SIZE   = Vector2.new(565, 385)
-local EXPANDED_UI_SIZE = Vector2.new(905, 405)
+local NORMAL_UI_SIZE   = Vector2.new(580, 400)
+local EXPANDED_UI_SIZE = Vector2.new(920, 420)
 local UI_SAFE_MARGIN   = 14
 
 local function GetViewportSize()
@@ -121,7 +145,6 @@ local function ClampFloatingPosition(pos)
 	local minY = halfH + 8
 	local maxY = vp.Y - halfH - 8
 
-	-- Zona reservada para o analógico virtual no canto inferior esquerdo.
 	if pos.X < 210 and pos.Y > vp.Y - 210 then
 		pos = Vector2.new(220, math.min(pos.Y, vp.Y - 230))
 	end
@@ -159,7 +182,7 @@ end
 
 -- ==================== SCREENGUI ====================
 local screenGui           = Instance.new("ScreenGui")
-screenGui.Name            = "AkatBloxFruitsUI"
+screenGui.Name            = "DeltaAkatBFUI"
 screenGui.ResetOnSpawn    = false
 screenGui.IgnoreGuiInset  = true
 screenGui.ZIndexBehavior  = Enum.ZIndexBehavior.Sibling
@@ -171,8 +194,8 @@ else
 	pcall(function() uiParent = game:GetService("CoreGui") end)
 end
 
-if uiParent:FindFirstChild("AkatBloxFruitsUI") then
-	pcall(function() uiParent.AkatBloxFruitsUI:Destroy() end)
+if uiParent:FindFirstChild("DeltaAkatBFUI") then
+	pcall(function() uiParent.DeltaAkatBFUI:Destroy() end)
 end
 
 for _, bf in ipairs(Lighting:GetChildren()) do
@@ -297,13 +320,13 @@ FloatBtn.InputBegan:Connect(function(input)
 	end
 end)
 
-local SetUIState 
+local SetUIState
 
 -- ==================== DRAG DA JANELA PRINCIPAL ====================
 local mainWrapper         = Instance.new("Frame", screenGui)
 mainWrapper.Name          = "MainWrapper"
 mainWrapper.AnchorPoint   = Vector2.new(0.5, 0.5)
-mainWrapper.Size          = UDim2.new(0, 640, 0, 360)
+mainWrapper.Size          = UDim2.new(0, 640, 0, 380)
 mainWrapper.Position      = UDim2.new(0.5, 0, 0.5, 0)
 mainWrapper.BackgroundTransparency = 1
 mainWrapper.Visible       = false
@@ -385,21 +408,18 @@ UserInputService.InputEnded:Connect(function(input)
 	end
 end)
 
-
 -- ==================== FLOATING ACTION BUTTONS ====================
 local floatingButtons = {}
 local floatingDragState = nil
 local floatingActionDebounce = {}
 local FLOATING_ACTION_DEBOUNCE = 0.45
 
--- Reserva uma área para o thumbstick móvel no canto inferior esquerdo.
 local function ClampFloatingToSafeArea(position)
     local vp = GetViewportSize()
     local halfW = FLOATING_BUTTON_SIZE.X * 0.5
     local halfH = FLOATING_BUTTON_SIZE.Y * 0.5
     local x = math.clamp(position.X, halfW + UI_SAFE_MARGIN, vp.X - halfW - UI_SAFE_MARGIN)
     local y = math.clamp(position.Y, halfH + UI_SAFE_MARGIN, vp.Y - halfH - UI_SAFE_MARGIN)
-    -- Zona reservada para o analógico do mobile (canto inferior esquerdo)
     if x < 230 and y > vp.Y - 220 then
         x = 230
         y = math.min(y, vp.Y - 230)
@@ -413,8 +433,8 @@ local function GetFloatingInitialPosition(side)
     local mainSize = mainWrapper.AbsoluteSize
 
     if mainSize.X <= 0 or mainSize.Y <= 0 then
-        mainPos = Vector2.new(vp.X * 0.5 - 320, vp.Y * 0.5 - 180)
-        mainSize = Vector2.new(640, 360)
+        mainPos = Vector2.new(vp.X * 0.5 - 320, vp.Y * 0.5 - 190)
+        mainSize = Vector2.new(640, 380)
     end
 
     local halfW = FLOATING_BUTTON_SIZE.X * 0.5
@@ -440,17 +460,14 @@ end
 
 local function SetupFloatingDrag(inputObject, root)
     inputObject.Active = true
-
     inputObject.InputBegan:Connect(function(input)
         if input.UserInputType ~= Enum.UserInputType.MouseButton1
             and input.UserInputType ~= Enum.UserInputType.Touch then
             return
         end
         if floatingDragState then return end
-
         floatingDragState = {
-            root = root,
-            input = input,
+            root = root, input = input,
             inputType = input.UserInputType,
             startInputPosition = input.Position,
             startButtonPosition = root.Position,
@@ -494,9 +511,6 @@ UserInputService.InputEnded:Connect(function(input)
         local action = floatingButtons[buttonKey]
         local now = os.clock()
         local last = floatingActionDebounce[buttonKey] or 0
-
-        -- Proteção contra toque duplo/acidental no mobile. Um único toque
-        -- gera no máximo uma ação dentro desta pequena janela.
         if action and action.callback and (now - last) >= FLOATING_ACTION_DEBOUNCE then
             floatingActionDebounce[buttonKey] = now
             task.spawn(action.callback)
@@ -514,21 +528,10 @@ function CreateFloatingButton(buttonKey, text, side, callback)
         existing.destroying = false
         existing.callback = callback
         existing.root.Visible = true
-
-        TweenService:Create(
-            existing.root,
-            TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {GroupTransparency = 0}
-        ):Play()
-
+        TweenService:Create(existing.root, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {GroupTransparency = 0}):Play()
         if existing.scale then
-            TweenService:Create(
-                existing.scale,
-                TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-                {Scale = 1}
-            ):Play()
+            TweenService:Create(existing.scale, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
         end
-
         return existing.root
     end
 
@@ -554,7 +557,7 @@ function CreateFloatingButton(buttonKey, text, side, callback)
     button.AutoButtonColor = false
     button.Text = text
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.TextSize = 17
+    button.TextSize = 15
     button.Font = Enum.Font.GothamBold
     button.ZIndex = 81
     button.Parent = root
@@ -563,27 +566,19 @@ function CreateFloatingButton(buttonKey, text, side, callback)
     corner.CornerRadius = UDim.new(0, 14)
     corner.Parent = button
 
-    button.TextColor3 = Color3.fromRGB(255, 255, 255)
-
-    -- Uma única borda interna. Evita as pontas vermelhas que apareciam
-    -- para fora do arredondamento do botão em telas móveis.
     root.ClipsDescendants = true
     button.ClipsDescendants = true
     local rootCorner = Instance.new("UICorner")
     rootCorner.CornerRadius = UDim.new(0, 14)
     rootCorner.Parent = root
 
-    -- O AUTO SHOOT não usa UIStroke: o stroke vermelho era o responsável
-    -- pelas pontas/bordas escapando para fora em alguns aparelhos móveis.
-    if buttonKey ~= "Never" then
-        local stroke = Instance.new("UIStroke")
-        stroke.Name = "CleanBorder"
-        stroke.Thickness = 1
-        stroke.Transparency = 0.18
-        stroke.Color = Color3.fromRGB(150, 20, 28)
-        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        stroke.Parent = button
-    end
+    local stroke = Instance.new("UIStroke")
+    stroke.Name = "CleanBorder"
+    stroke.Thickness = 1
+    stroke.Transparency = 0.18
+    stroke.Color = Color3.fromRGB(150, 20, 28)
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Parent = button
 
     local gradient = Instance.new("UIGradient")
     gradient.Color = ColorSequence.new({
@@ -599,12 +594,9 @@ function CreateFloatingButton(buttonKey, text, side, callback)
     scale.Parent = root
 
     floatingButtons[buttonKey] = {
-        root = root,
-        gradient = gradient,
-        callback = callback,
-        scale = scale,
-        destroying = false,
-        destroyTween = nil,
+        root = root, gradient = gradient,
+        callback = callback, scale = scale,
+        destroying = false, destroyTween = nil,
     }
 
     SetupFloatingDrag(button, root)
@@ -618,17 +610,8 @@ function CreateFloatingButton(buttonKey, text, side, callback)
         end
     end)
 
-    TweenService:Create(
-        root,
-        TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {GroupTransparency = 0}
-    ):Play()
-
-    TweenService:Create(
-        scale,
-        TweenInfo.new(0.38, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-        {Scale = 1}
-    ):Play()
+    TweenService:Create(root, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {GroupTransparency = 0}):Play()
+    TweenService:Create(scale, TweenInfo.new(0.38, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
 
     return root
 end
@@ -651,16 +634,8 @@ function DestroyFloatingButton(buttonKey)
     end
 
     local scale = data.scale
-    local fade = TweenService:Create(
-        root,
-        TweenInfo.new(0.20, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-        {GroupTransparency = 1}
-    )
-    local shrink = scale and TweenService:Create(
-        scale,
-        TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-        {Scale = 0.88}
-    )
+    local fade = TweenService:Create(root, TweenInfo.new(0.20, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {GroupTransparency = 1})
+    local shrink = scale and TweenService:Create(scale, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.88})
 
     data.destroyTween = fade
     fade:Play()
@@ -668,53 +643,23 @@ function DestroyFloatingButton(buttonKey)
 
     fade.Completed:Connect(function()
         if floatingButtons[buttonKey] ~= data then return end
-
         floatingButtons[buttonKey] = nil
-        if root and root.Parent then
-            root:Destroy()
-        end
+        if root and root.Parent then root:Destroy() end
     end)
 end
 
-local function SyncFloatingButton(configKey)
-	if configKey == "AutoFarmLevel" then
-		if Configs[configKey] then
-			CreateFloatingButton(
-				"AutoFarmLevel",
-				"FARM LEVEL",
-				"right",
-				function()
-					if _G.AkatCallbacks and type(_G.AkatCallbacks.AutoFarmLevel) == "function" then
-						task.spawn(function() pcall(_G.AkatCallbacks.AutoFarmLevel, true) end)
-					end
-				end
-			)
-		else
-			DestroyFloatingButton("AutoFarmLevel")
-		end
-	end
-end
-
 _G.AkatUIShutdown = function()
-    if floatingDragState then
-        floatingDragState = nil
-    end
-
+    if floatingDragState then floatingDragState = nil end
     for key, data in pairs(floatingButtons) do
         if data and data.root then
             pcall(function()
-                if data.root.Parent then
-                    data.root:Destroy()
-                end
+                if data.root.Parent then data.root:Destroy() end
             end)
         end
         floatingButtons[key] = nil
     end
-
     pcall(function()
-        if screenGui and screenGui.Parent then
-            screenGui:Destroy()
-        end
+        if screenGui and screenGui.Parent then screenGui:Destroy() end
     end)
 end
 
@@ -1032,7 +977,6 @@ PrivacyBtn.MouseButton1Click:Connect(function()
 	PlayUI_Click()
 	local flashTween = TweenService:Create(PrivacyBtn, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true), {BackgroundTransparency = 0})
 	flashTween:Play()
-
 	isPrivate = not isPrivate
 	if isPrivate then
 		PrivacyIcon.Image = "rbxthumb://type=Asset&id=85795266774996&w=150&h=150"
@@ -1095,7 +1039,7 @@ local CloseBtn,    CloseIcon    = CriarBotaoTopo("CloseBtn",    "rbxthumb://type
 
 local BadgeFrame           = Instance.new("Frame", RightPanel)
 BadgeFrame.Name            = "BadgeFrame"
-BadgeFrame.Size            = UDim2.new(0, 44, 0, 18)
+BadgeFrame.Size            = UDim2.new(0, 52, 0, 18)
 BadgeFrame.Position        = UDim2.new(0, 12, 0, 9)
 BadgeFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 BadgeFrame.BorderSizePixel = 0
@@ -1123,17 +1067,40 @@ badgeStrokeGrad.Color      = ColorSequence.new({
 local BadgeText            = Instance.new("TextLabel", BadgeFrame)
 BadgeText.Size             = UDim2.new(1, 0, 1, 0)
 BadgeText.BackgroundTransparency = 1
-BadgeText.Text             = "BF 6.0"
+BadgeText.Text             = "BF V1.0"
 BadgeText.TextColor3       = Color3.fromRGB(255, 255, 255)
 BadgeText.Font             = Enum.Font.GothamBold
 BadgeText.TextSize         = 8.5
 BadgeText.ZIndex           = 16
 
+-- ==================== STATUS FARM LABEL (acima dos toggles) ====================
+local FarmStatusBar        = Instance.new("Frame", RightPanel)
+FarmStatusBar.Name         = "FarmStatusBar"
+FarmStatusBar.Size         = UDim2.new(1, -12, 0, 22)
+FarmStatusBar.Position     = UDim2.new(0, 6, 0, 36)
+FarmStatusBar.BackgroundColor3 = Color3.fromRGB(20, 8, 8)
+FarmStatusBar.BackgroundTransparency = 0.5
+FarmStatusBar.BorderSizePixel = 0
+FarmStatusBar.ZIndex       = 15
+Instance.new("UICorner", FarmStatusBar).CornerRadius = UDim.new(0, 6)
+
+statusLabel                = Instance.new("TextLabel", FarmStatusBar)
+statusLabel.Size           = UDim2.new(1, -10, 1, 0)
+statusLabel.Position       = UDim2.new(0, 8, 0, 0)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text           = "● Idle"
+statusLabel.TextColor3     = Color3.fromRGB(180, 220, 180)
+statusLabel.Font           = Enum.Font.GothamMedium
+statusLabel.TextSize       = 11
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.TextYAlignment = Enum.TextYAlignment.Center
+statusLabel.ZIndex         = 16
+
 -- ==================== TOGGLES CONTAINER ====================
 local togglesContainer     = Instance.new("ScrollingFrame", RightPanel)
 togglesContainer.Name      = "TogglesContainer"
-togglesContainer.Size      = UDim2.new(1, -12, 1, -48)
-togglesContainer.Position  = UDim2.new(0, 6, 0, 42)
+togglesContainer.Size      = UDim2.new(1, -12, 1, -64)
+togglesContainer.Position  = UDim2.new(0, 6, 0, 62)
 togglesContainer.BackgroundColor3 = Color3.fromRGB(30, 12, 14)
 togglesContainer.BackgroundTransparency = 0.7
 togglesContainer.BorderSizePixel = 0
@@ -1280,6 +1247,8 @@ RunService.RenderStepped:Connect(function()
 	avGrad.Rotation          = 45 + math.sin(t * 0.80) * 35
 	badgeGrad.Rotation       = 45 + math.sin(t * 0.45) * 20
 	badgeStrokeGrad.Rotation = 45 + math.sin(t * 0.45) * 20
+	-- Atualiza status label periodicamente
+	UpdateStatusLabel()
 end)
 
 -- ==================== SISTEMA DE NOTIFICAÇÃO (STACK / FILA) ====================
@@ -1300,7 +1269,6 @@ local function UpdateNotifications()
 	end
 end
 
--- ==================== NOTIFICAÇÃO GENÉRICA ====================
 local function CriarNotificacao(titulo, descricao, iconeId)
 	local notifHolder              = Instance.new("Frame", screenGui)
 	notifHolder.Name               = "NotifHolder"
@@ -1324,19 +1292,6 @@ local function CriarNotificacao(titulo, descricao, iconeId)
 	notifCard.ClipsDescendants     = false
 	Instance.new("UICorner", notifCard).CornerRadius = UDim.new(0, 16)
 
-	local notifShadow              = Instance.new("ImageLabel", notifCard)
-	notifShadow.Name               = "Shadow"
-	notifShadow.AnchorPoint        = Vector2.new(0.5, 0.5)
-	notifShadow.Position           = UDim2.new(0.5, 0, 0.5, 4)
-	notifShadow.Size               = UDim2.new(1, 24, 1, 24)
-	notifShadow.BackgroundTransparency = 1
-	notifShadow.Image              = "rbxassetid://5554831957"
-	notifShadow.ImageColor3        = Color3.fromRGB(0, 0, 0)
-	notifShadow.ImageTransparency  = 0.35
-	notifShadow.ScaleType          = Enum.ScaleType.Slice
-	notifShadow.SliceCenter        = Rect.new(36, 36, 114, 114)
-	notifShadow.ZIndex             = 200
-
 	local accentBar                = Instance.new("Frame", notifCard)
 	accentBar.Size                 = UDim2.new(0, 4, 0, 52)
 	accentBar.Position             = UDim2.new(0, 14, 0.5, -26)
@@ -1344,12 +1299,6 @@ local function CriarNotificacao(titulo, descricao, iconeId)
 	accentBar.BorderSizePixel      = 0
 	accentBar.ZIndex               = 202
 	Instance.new("UICorner", accentBar).CornerRadius = UDim.new(1, 0)
-	local accentGrad               = Instance.new("UIGradient", accentBar)
-	accentGrad.Rotation            = 90
-	accentGrad.Color               = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(230, 30, 30)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 10, 10))
-	})
 
 	local notifTitle               = Instance.new("TextLabel", notifCard)
 	notifTitle.Size                = UDim2.new(1, -76, 0, 18)
@@ -1371,7 +1320,6 @@ local function CriarNotificacao(titulo, descricao, iconeId)
 	notifDesc.Font                 = Enum.Font.Gotham
 	notifDesc.TextSize             = 12
 	notifDesc.TextXAlignment       = Enum.TextXAlignment.Left
-	notifDesc.TextYAlignment       = Enum.TextYAlignment.Top
 	notifDesc.TextWrapped          = true
 	notifDesc.ZIndex               = 203
 
@@ -1384,40 +1332,6 @@ local function CriarNotificacao(titulo, descricao, iconeId)
 	notifCloseBtn.ZIndex           = 205
 	notifCloseBtn.BorderSizePixel  = 0
 	Instance.new("UICorner", notifCloseBtn).CornerRadius = UDim.new(0, 6)
-	local xStroke                  = Instance.new("UIStroke", notifCloseBtn)
-	xStroke.Color                  = Color3.fromRGB(80, 80, 85)
-	xStroke.Thickness              = 1
-	xStroke.Transparency           = 0.5
-
-	local xL1                      = Instance.new("Frame", notifCloseBtn)
-	xL1.AnchorPoint                = Vector2.new(0.5, 0.5)
-	xL1.Position                   = UDim2.new(0.5, 0, 0.5, 0)
-	xL1.Size                       = UDim2.new(0, 10, 0, 1.5)
-	xL1.Rotation                   = 45
-	xL1.BackgroundColor3           = Color3.fromRGB(160, 160, 165)
-	xL1.BorderSizePixel            = 0
-	xL1.ZIndex                     = 206
-	Instance.new("UICorner", xL1).CornerRadius = UDim.new(1, 0)
-	local xL2                      = Instance.new("Frame", notifCloseBtn)
-	xL2.AnchorPoint                = Vector2.new(0.5, 0.5)
-	xL2.Position                   = UDim2.new(0.5, 0, 0.5, 0)
-	xL2.Size                       = UDim2.new(0, 10, 0, 1.5)
-	xL2.Rotation                   = -45
-	xL2.BackgroundColor3           = Color3.fromRGB(160, 160, 165)
-	xL2.BorderSizePixel            = 0
-	xL2.ZIndex                     = 206
-	Instance.new("UICorner", xL2).CornerRadius = UDim.new(1, 0)
-
-	notifCloseBtn.MouseEnter:Connect(function()
-		TweenService:Create(notifCloseBtn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(160, 20, 20)}):Play()
-		TweenService:Create(xL1, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-		TweenService:Create(xL2, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-	end)
-	notifCloseBtn.MouseLeave:Connect(function()
-		TweenService:Create(notifCloseBtn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(35, 35, 38)}):Play()
-		TweenService:Create(xL1, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(160, 160, 165)}):Play()
-		TweenService:Create(xL2, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(160, 160, 165)}):Play()
-	end)
 
 	local progressBg               = Instance.new("Frame", notifCard)
 	progressBg.Size                = UDim2.new(1, -28, 0, 3)
@@ -1430,16 +1344,10 @@ local function CriarNotificacao(titulo, descricao, iconeId)
 
 	local progressBar              = Instance.new("Frame", progressBg)
 	progressBar.Size               = UDim2.new(1, 0, 1, 0)
-	progressBar.Position           = UDim2.new(0, 0, 0, 0)
-	progressBar.BackgroundColor3   = Color3.fromRGB(255, 255, 255)
+	progressBar.BackgroundColor3   = Color3.fromRGB(230, 20, 25)
 	progressBar.BorderSizePixel    = 0
 	progressBar.ZIndex             = 203
 	Instance.new("UICorner", progressBar).CornerRadius = UDim.new(1, 0)
-	local progressGrad             = Instance.new("UIGradient", progressBar)
-	progressGrad.Color             = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(230, 20, 25)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 0, 0))
-	})
 
 	table.insert(ActiveNotifications, 1, notifHolder)
 	UpdateNotifications()
@@ -1447,9 +1355,7 @@ local function CriarNotificacao(titulo, descricao, iconeId)
 	TweenService:Create(notifHolder, TweenInfo.new(0.30, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), {
 		Position = UDim2.new(1, -20, 1, -24)
 	}):Play()
-	TweenService:Create(notifScale, TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-		Scale = 1
-	}):Play()
+	TweenService:Create(notifScale, TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Scale = 1}):Play()
 
 	local dismissed = false
 	local function DismissNotif()
@@ -1464,9 +1370,6 @@ local function CriarNotificacao(titulo, descricao, iconeId)
 			Position = UDim2.new(1, 360, notifHolder.Position.Y.Scale, notifHolder.Position.Y.Offset)
 		}):Play()
 		TweenService:Create(notifCard, slideOut, {BackgroundTransparency = 1}):Play()
-		TweenService:Create(notifScale, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-			Scale = 0.96
-		}):Play()
 		task.delay(0.28, function()
 			if notifHolder and notifHolder.Parent then notifHolder:Destroy() end
 		end)
@@ -1478,191 +1381,10 @@ local function CriarNotificacao(titulo, descricao, iconeId)
 	task.delay(NOTIF_DURATION + 0.1, function() DismissNotif() end)
 end
 
--- ==================== NOTIFICAÇÃO DE LINK COPIADO ====================
-local function CriarNotificacaoLinkCopiado(texto, iconeId)
-	local notifHolder              = Instance.new("Frame", screenGui)
-	notifHolder.Name               = "NotifHolderLink"
-	notifHolder.AnchorPoint        = Vector2.new(1, 1)
-	notifHolder.Size               = UDim2.new(0, 330, 0, 64)
-	notifHolder.Position           = UDim2.new(1, 360, 1, -24)
-	notifHolder.BackgroundTransparency = 1
-	notifHolder.ZIndex             = 200
-	notifHolder.ClipsDescendants   = false
-
-	local notifScale = Instance.new("UIScale", notifHolder)
-	notifScale.Scale = 0.96
-
-	local notifCard                = Instance.new("Frame", notifHolder)
-	notifCard.Name                 = "NotifCard"
-	notifCard.Size                 = UDim2.new(1, 0, 1, 0)
-	notifCard.BackgroundColor3     = Color3.fromRGB(16, 16, 18)
-	notifCard.BackgroundTransparency = 0.25
-	notifCard.BorderSizePixel      = 0
-	notifCard.ZIndex               = 201
-	notifCard.ClipsDescendants     = false
-	Instance.new("UICorner", notifCard).CornerRadius = UDim.new(0, 16)
-
-	local notifShadow              = Instance.new("ImageLabel", notifCard)
-	notifShadow.Name               = "Shadow"
-	notifShadow.AnchorPoint        = Vector2.new(0.5, 0.5)
-	notifShadow.Position           = UDim2.new(0.5, 0, 0.5, 4)
-	notifShadow.Size               = UDim2.new(1, 24, 1, 24)
-	notifShadow.BackgroundTransparency = 1
-	notifShadow.Image              = "rbxassetid://5554831957"
-	notifShadow.ImageColor3        = Color3.fromRGB(0, 0, 0)
-	notifShadow.ImageTransparency  = 0.35
-	notifShadow.ScaleType          = Enum.ScaleType.Slice
-	notifShadow.SliceCenter        = Rect.new(36, 36, 114, 114)
-	notifShadow.ZIndex             = 200
-
-	local accentBar                = Instance.new("Frame", notifCard)
-	accentBar.Size                 = UDim2.new(0, 4, 0, 36)
-	accentBar.Position             = UDim2.new(0, 14, 0.5, -18)
-	accentBar.BackgroundColor3     = Color3.fromRGB(180, 20, 20)
-	accentBar.BorderSizePixel      = 0
-	accentBar.ZIndex               = 202
-	Instance.new("UICorner", accentBar).CornerRadius = UDim.new(1, 0)
-	local accentGrad               = Instance.new("UIGradient", accentBar)
-	accentGrad.Rotation            = 90
-	accentGrad.Color               = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(230, 30, 30)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 10, 10))
-	})
-
-	local contentContainer         = Instance.new("Frame", notifCard)
-	contentContainer.Size          = UDim2.new(1, -64, 1, -12)
-	contentContainer.Position      = UDim2.new(0, 26, 0, 6)
-	contentContainer.BackgroundTransparency = 1
-	local cLayout                  = Instance.new("UIListLayout", contentContainer)
-	cLayout.FillDirection          = Enum.FillDirection.Horizontal
-	cLayout.SortOrder              = Enum.SortOrder.LayoutOrder
-	cLayout.VerticalAlignment      = Enum.VerticalAlignment.Center
-	cLayout.HorizontalAlignment    = Enum.HorizontalAlignment.Center
-	cLayout.Padding                = UDim.new(0, 8)
-
-	local notifText                = Instance.new("TextLabel", contentContainer)
-	notifText.LayoutOrder          = 1
-	notifText.AutomaticSize        = Enum.AutomaticSize.X
-	notifText.Size                 = UDim2.new(0, 0, 0, 24)
-	notifText.BackgroundTransparency = 1
-	notifText.Text                 = texto or "LINK COPIED SUCCESSFULLY"
-	notifText.TextColor3           = Color3.fromRGB(240, 240, 240)
-	notifText.Font                 = Enum.Font.GothamBold
-	notifText.TextSize             = 15
-	notifText.TextXAlignment       = Enum.TextXAlignment.Left
-	notifText.ZIndex               = 203
-
-	if iconeId then
-		local verifyIcon           = Instance.new("ImageLabel", contentContainer)
-		verifyIcon.LayoutOrder     = 2
-		verifyIcon.Size            = UDim2.new(0, 24, 0, 24)
-		verifyIcon.BackgroundTransparency = 1
-		verifyIcon.Image           = iconeId
-		verifyIcon.ZIndex          = 204
-	end
-
-	local notifCloseBtn            = Instance.new("TextButton", notifCard)
-	notifCloseBtn.Size             = UDim2.new(0, 20, 0, 20)
-	notifCloseBtn.Position         = UDim2.new(1, -28, 0.5, -10)
-	notifCloseBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 38)
-	notifCloseBtn.BackgroundTransparency = 0.2
-	notifCloseBtn.Text             = ""
-	notifCloseBtn.ZIndex           = 205
-	notifCloseBtn.BorderSizePixel  = 0
-	Instance.new("UICorner", notifCloseBtn).CornerRadius = UDim.new(0, 6)
-	local xStroke                  = Instance.new("UIStroke", notifCloseBtn)
-	xStroke.Color                  = Color3.fromRGB(80, 80, 85)
-	xStroke.Thickness              = 1
-	xStroke.Transparency           = 0.5
-	local xL1                      = Instance.new("Frame", notifCloseBtn)
-	xL1.AnchorPoint                = Vector2.new(0.5, 0.5)
-	xL1.Position                   = UDim2.new(0.5, 0, 0.5, 0)
-	xL1.Size                       = UDim2.new(0, 8, 0, 1.5)
-	xL1.Rotation                   = 45
-	xL1.BackgroundColor3           = Color3.fromRGB(160, 160, 165)
-	xL1.BorderSizePixel            = 0
-	xL1.ZIndex                     = 206
-	Instance.new("UICorner", xL1).CornerRadius = UDim.new(1, 0)
-	local xL2                      = Instance.new("Frame", notifCloseBtn)
-	xL2.AnchorPoint                = Vector2.new(0.5, 0.5)
-	xL2.Position                   = UDim2.new(0.5, 0, 0.5, 0)
-	xL2.Size                       = UDim2.new(0, 8, 0, 1.5)
-	xL2.Rotation                   = -45
-	xL2.BackgroundColor3           = Color3.fromRGB(160, 160, 165)
-	xL2.BorderSizePixel            = 0
-	xL2.ZIndex                     = 206
-	Instance.new("UICorner", xL2).CornerRadius = UDim.new(1, 0)
-
-	notifCloseBtn.MouseEnter:Connect(function()
-		TweenService:Create(notifCloseBtn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(160, 20, 20)}):Play()
-		TweenService:Create(xL1, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-		TweenService:Create(xL2, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-	end)
-	notifCloseBtn.MouseLeave:Connect(function()
-		TweenService:Create(notifCloseBtn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(35, 35, 38)}):Play()
-		TweenService:Create(xL1, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(160, 160, 165)}):Play()
-		TweenService:Create(xL2, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(160, 160, 165)}):Play()
-	end)
-
-	local progressBg               = Instance.new("Frame", notifCard)
-	progressBg.Size                = UDim2.new(1, -28, 0, 3)
-	progressBg.Position            = UDim2.new(0, 14, 1, -8)
-	progressBg.BackgroundColor3    = Color3.fromRGB(30, 30, 35)
-	progressBg.BorderSizePixel     = 0
-	progressBg.ZIndex              = 202
-	progressBg.ClipsDescendants    = true
-	Instance.new("UICorner", progressBg).CornerRadius = UDim.new(1, 0)
-	local progressBar              = Instance.new("Frame", progressBg)
-	progressBar.Size               = UDim2.new(1, 0, 1, 0)
-	progressBar.Position           = UDim2.new(0, 0, 0, 0)
-	progressBar.BackgroundColor3   = Color3.fromRGB(255, 255, 255)
-	progressBar.BorderSizePixel    = 0
-	progressBar.ZIndex             = 203
-	Instance.new("UICorner", progressBar).CornerRadius = UDim.new(1, 0)
-	local progressGrad             = Instance.new("UIGradient", progressBar)
-	progressGrad.Color             = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(230, 20, 25)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 0, 0))
-	})
-
-	table.insert(ActiveNotifications, 1, notifHolder)
-	UpdateNotifications()
-
-	TweenService:Create(notifHolder, TweenInfo.new(0.30, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), {
-		Position = UDim2.new(1, -20, 1, -24)
-	}):Play()
-	TweenService:Create(notifScale, TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-		Scale = 1
-	}):Play()
-
-	local dismissed = false
-	local function DismissNotif()
-		if dismissed then return end
-		dismissed = true
-		for i, v in ipairs(ActiveNotifications) do
-			if v == notifHolder then table.remove(ActiveNotifications, i) break end
-		end
-		UpdateNotifications()
-		local slideOut = TweenInfo.new(0.25, Enum.EasingStyle.Cubic, Enum.EasingDirection.In)
-		TweenService:Create(notifHolder, slideOut, {
-			Position = UDim2.new(1, 360, notifHolder.Position.Y.Scale, notifHolder.Position.Y.Offset)
-		}):Play()
-		TweenService:Create(notifCard, slideOut, {BackgroundTransparency = 1}):Play()
-		TweenService:Create(notifScale, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-			Scale = 0.96
-		}):Play()
-		task.delay(0.28, function()
-			if notifHolder and notifHolder.Parent then notifHolder:Destroy() end
-		end)
-	end
-
-	notifCloseBtn.MouseButton1Click:Connect(function() DismissNotif() end)
-	local barTween = TweenService:Create(progressBar, TweenInfo.new(NOTIF_DURATION, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {Size = UDim2.new(0, 0, 1, 0)})
-	task.delay(0.1, function() barTween:Play() end)
-	task.delay(NOTIF_DURATION + 0.1, function() DismissNotif() end)
+local function CriarNotificacaoLinkCopiado(texto)
+	CriarNotificacao("LINK COPIADO", texto)
 end
 
--- ==================== NOTIFICAÇÃO DISCORD ====================
 local function CriarNotificacaoDiscord()
 	local notifHolder              = Instance.new("Frame", screenGui)
 	notifHolder.Name               = "NotifHolderDiscord"
@@ -1685,19 +1407,6 @@ local function CriarNotificacaoDiscord()
 	notifCard.ZIndex               = 201
 	notifCard.ClipsDescendants     = false
 	Instance.new("UICorner", notifCard).CornerRadius = UDim.new(0, 16)
-
-	local notifShadow              = Instance.new("ImageLabel", notifCard)
-	notifShadow.Name               = "Shadow"
-	notifShadow.AnchorPoint        = Vector2.new(0.5, 0.5)
-	notifShadow.Position           = UDim2.new(0.5, 0, 0.5, 4)
-	notifShadow.Size               = UDim2.new(1, 24, 1, 24)
-	notifShadow.BackgroundTransparency = 1
-	notifShadow.Image              = "rbxassetid://5554831957"
-	notifShadow.ImageColor3        = Color3.fromRGB(0, 0, 0)
-	notifShadow.ImageTransparency  = 0.35
-	notifShadow.ScaleType          = Enum.ScaleType.Slice
-	notifShadow.SliceCenter        = Rect.new(36, 36, 114, 114)
-	notifShadow.ZIndex             = 200
 
 	local accentBar                = Instance.new("Frame", notifCard)
 	accentBar.Size                 = UDim2.new(0, 4, 0, 52)
@@ -1727,7 +1436,6 @@ local function CriarNotificacaoDiscord()
 	notifDesc.Font                 = Enum.Font.Gotham
 	notifDesc.TextSize             = 12
 	notifDesc.TextXAlignment       = Enum.TextXAlignment.Left
-	notifDesc.TextYAlignment       = Enum.TextYAlignment.Top
 	notifDesc.TextWrapped          = true
 	notifDesc.ZIndex               = 203
 
@@ -1746,15 +1454,9 @@ local function CriarNotificacaoDiscord()
 
 	copyBtn.MouseButton1Click:Connect(function()
 		PlayUI_Click()
-		local success = false
 		if setclipboard then
-			local ok = pcall(function()
-				setclipboard("https://discord.gg/rZuYzZ7zvt")
-			end)
-			success = ok
-		end
-		if success then
-			CriarNotificacaoLinkCopiado("LINK COPIED SUCCESSFULLY!", "rbxthumb://type=Asset&id=118293546444074&w=150&h=150")
+			pcall(function() setclipboard("https://discord.gg/rZuYzZ7zvt") end)
+			CriarNotificacaoLinkCopiado("Link copiado com sucesso!")
 		end
 	end)
 
@@ -1767,39 +1469,6 @@ local function CriarNotificacaoDiscord()
 	notifCloseBtn.ZIndex           = 205
 	notifCloseBtn.BorderSizePixel  = 0
 	Instance.new("UICorner", notifCloseBtn).CornerRadius = UDim.new(0, 6)
-	local xStroke                  = Instance.new("UIStroke", notifCloseBtn)
-	xStroke.Color                  = Color3.fromRGB(80, 80, 85)
-	xStroke.Thickness              = 1
-	xStroke.Transparency           = 0.5
-	local xL1                      = Instance.new("Frame", notifCloseBtn)
-	xL1.AnchorPoint                = Vector2.new(0.5, 0.5)
-	xL1.Position                   = UDim2.new(0.5, 0, 0.5, 0)
-	xL1.Size                       = UDim2.new(0, 10, 0, 1.5)
-	xL1.Rotation                   = 45
-	xL1.BackgroundColor3           = Color3.fromRGB(160, 160, 165)
-	xL1.BorderSizePixel            = 0
-	xL1.ZIndex                     = 206
-	Instance.new("UICorner", xL1).CornerRadius = UDim.new(1, 0)
-	local xL2                      = Instance.new("Frame", notifCloseBtn)
-	xL2.AnchorPoint                = Vector2.new(0.5, 0.5)
-	xL2.Position                   = UDim2.new(0.5, 0, 0.5, 0)
-	xL2.Size                       = UDim2.new(0, 10, 0, 1.5)
-	xL2.Rotation                   = -45
-	xL2.BackgroundColor3           = Color3.fromRGB(160, 160, 165)
-	xL2.BorderSizePixel            = 0
-	xL2.ZIndex                     = 206
-	Instance.new("UICorner", xL2).CornerRadius = UDim.new(1, 0)
-
-	notifCloseBtn.MouseEnter:Connect(function()
-		TweenService:Create(notifCloseBtn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(160, 20, 20)}):Play()
-		TweenService:Create(xL1, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-		TweenService:Create(xL2, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-	end)
-	notifCloseBtn.MouseLeave:Connect(function()
-		TweenService:Create(notifCloseBtn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(35, 35, 38)}):Play()
-		TweenService:Create(xL1, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(160, 160, 165)}):Play()
-		TweenService:Create(xL2, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(160, 160, 165)}):Play()
-	end)
 
 	local progressBg               = Instance.new("Frame", notifCard)
 	progressBg.Size                = UDim2.new(1, -28, 0, 3)
@@ -1809,18 +1478,13 @@ local function CriarNotificacaoDiscord()
 	progressBg.ZIndex              = 202
 	progressBg.ClipsDescendants    = true
 	Instance.new("UICorner", progressBg).CornerRadius = UDim.new(1, 0)
+
 	local progressBar              = Instance.new("Frame", progressBg)
 	progressBar.Size               = UDim2.new(1, 0, 1, 0)
-	progressBar.Position           = UDim2.new(0, 0, 0, 0)
-	progressBar.BackgroundColor3   = Color3.fromRGB(255, 255, 255)
+	progressBar.BackgroundColor3   = Color3.fromRGB(88, 101, 242)
 	progressBar.BorderSizePixel    = 0
 	progressBar.ZIndex             = 203
 	Instance.new("UICorner", progressBar).CornerRadius = UDim.new(1, 0)
-	local progressGrad             = Instance.new("UIGradient", progressBar)
-	progressGrad.Color             = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(88, 101, 242)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 30, 100))
-	})
 
 	table.insert(ActiveNotifications, 1, notifHolder)
 	UpdateNotifications()
@@ -1828,9 +1492,7 @@ local function CriarNotificacaoDiscord()
 	TweenService:Create(notifHolder, TweenInfo.new(0.30, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), {
 		Position = UDim2.new(1, -20, 1, -24)
 	}):Play()
-	TweenService:Create(notifScale, TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-		Scale = 1
-	}):Play()
+	TweenService:Create(notifScale, TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Scale = 1}):Play()
 
 	local dismissed = false
 	local function DismissNotif()
@@ -1845,9 +1507,6 @@ local function CriarNotificacaoDiscord()
 			Position = UDim2.new(1, 360, notifHolder.Position.Y.Scale, notifHolder.Position.Y.Offset)
 		}):Play()
 		TweenService:Create(notifCard, slideOut, {BackgroundTransparency = 1}):Play()
-		TweenService:Create(notifScale, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-			Scale = 0.96
-		}):Play()
 		task.delay(0.28, function()
 			if notifHolder and notifHolder.Parent then notifHolder:Destroy() end
 		end)
@@ -1867,7 +1526,7 @@ local function filterToggles(currentActiveTab, query)
 	local itemIndex   = 0
 	for _, child in ipairs(togglesContainer:GetChildren()) do
 		if child:IsA("Frame") and child.Name ~= "UIListLayout" and child.Name ~= "UIPadding" then
-			local itemTab       = child:GetAttribute("Tab") or "Combat"
+			local itemTab       = child:GetAttribute("Tab") or "Main"
 			local shouldBeVisible = false
 			if searchQuery ~= "" then
 				local titleLabel = child:FindFirstChild("Title")
@@ -2015,11 +1674,13 @@ local function createTabBtn(tabName)
 	imageLabel.ZIndex          = 13
 	imageLabel.ImageColor3     = Color3.fromRGB(150, 150, 150)
 
-	if tabName == "Farming"   then imageLabel.Image = "rbxthumb://type=Asset&id=71234705040146&w=150&h=150"
-	elseif tabName == "Teleports" then imageLabel.Image = "rbxthumb://type=Asset&id=131082536388353&w=150&h=150"
-	elseif tabName == "Settings"  then imageLabel.Image = "rbxthumb://type=Asset&id=88409765080516&w=150&h=150"
-	elseif tabName == "Visuals"   then imageLabel.Image = "rbxthumb://type=Asset&id=97681798175944&w=150&h=150"
-	elseif tabName == "Combat"    then imageLabel.Image = "rbxthumb://type=Asset&id=105897102093789&w=150&h=150" end
+	-- Ícones por aba
+	if tabName == "Main"    then imageLabel.Image = "rbxthumb://type=Asset&id=71234705040146&w=150&h=150"
+	elseif tabName == "Boss"    then imageLabel.Image = "rbxthumb://type=Asset&id=105897102093789&w=150&h=150"
+	elseif tabName == "Mastery" then imageLabel.Image = "rbxthumb://type=Asset&id=97681798175944&w=150&h=150"
+	elseif tabName == "Farm"    then imageLabel.Image = "rbxthumb://type=Asset&id=131082536388353&w=150&h=150"
+	elseif tabName == "Player"  then imageLabel.Image = "rbxthumb://type=Asset&id=88409765080516&w=150&h=150"
+	end
 
 	local tabLabel             = Instance.new("TextLabel", tabBtn)
 	tabLabel.Name              = "Label"
@@ -2054,108 +1715,6 @@ local function createTabBtn(tabName)
 	tabButtons[tabName] = tabBtn
 end
 
--- ==================== CRIAR AÇÃO DE CLIQUE ====================
--- Ações de teleporte não ficam ligadas: cada toque executa uma vez.
-local function createAction(parent, configKey, tabCategory)
-    local frame = Instance.new("Frame")
-    frame.Name = configKey .. "Action"
-    frame.Size = UDim2.new(1, -10, 0, 42)
-    frame:SetAttribute("ItemHeight", 42)
-    frame.BackgroundColor3 = Color3.fromRGB(15, 5, 5)
-    frame.BackgroundTransparency = 0.45
-    frame.BorderSizePixel = 0
-    frame.ZIndex = 11
-    frame.ClipsDescendants = true
-    frame.LayoutOrder = ({TpNearestMob=1, TpBoss=2, TpChest=3, TpSafe=4})[configKey] or 10
-    frame:SetAttribute("Tab", tabCategory)
-    frame:SetAttribute("ConfigKey", configKey)
-    frame.Parent = parent
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-
-    local title = Instance.new("TextLabel", frame)
-    title.Name = "Title"
-    title.Size = UDim2.new(1, -24, 1, 0)
-    title.Position = UDim2.new(0, 12, 0, 0)
-    title.BackgroundTransparency = 1
-    title.TextColor3 = Color3.fromRGB(220, 220, 220)
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 13
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.TextYAlignment = Enum.TextYAlignment.Center
-    title.Text = (UI_TEXT.Options[configKey] and UI_TEXT.Options[configKey].Title) or configKey
-    title.ZIndex = 12
-
-    -- Sem imagem de indicador (removida por request)
-
-    -- Overlay de clique controlado manualmente para evitar sombra residual
-    local clickOverlay = Instance.new("Frame", frame)
-    clickOverlay.Name = "ClickOverlay"
-    clickOverlay.Size = UDim2.fromScale(1, 1)
-    clickOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    clickOverlay.BackgroundTransparency = 1
-    clickOverlay.BorderSizePixel = 0
-    clickOverlay.ZIndex = 12
-    Instance.new("UICorner", clickOverlay).CornerRadius = UDim.new(0, 8)
-
-    local hit = Instance.new("TextButton", frame)
-    hit.Name = "Action"
-    hit.Size = UDim2.fromScale(1, 1)
-    hit.BackgroundTransparency = 1
-    hit.Text = ""
-    hit.AutoButtonColor = false
-    hit.ZIndex = 13
-
-    local clickActive = false
-
-    local function startPulse()
-        if clickActive then return end
-        clickActive = true
-        TweenService:Create(clickOverlay,
-            TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {BackgroundTransparency = 0.60}
-        ):Play()
-    end
-
-    local function endPulse()
-        if not clickActive then return end
-        clickActive = false
-        TweenService:Create(clickOverlay,
-            TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {BackgroundTransparency = 1}
-        ):Play()
-    end
-
-    hit.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch then
-            startPulse()
-        end
-    end)
-
-    hit.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch then
-            endPulse()
-        end
-    end)
-
-    -- Garante que a sombra suma caso o ponteiro saia sem soltar
-    hit.MouseLeave:Connect(function()
-        endPulse()
-    end)
-
-    hit.MouseButton1Click:Connect(function()
-        PlayUI_Click()
-        endPulse()
-        local cb = _G.AkatCallbacks and _G.AkatCallbacks[configKey]
-        if type(cb) == "function" then
-            task.spawn(function() pcall(cb, true) end)
-        end
-    end)
-
-    return frame
-end
-
 -- ==================== CRIAR TOGGLE ====================
 local function createToggle(parent, configKey, tabCategory)
 	local toggleFrame              = Instance.new("Frame")
@@ -2165,7 +1724,6 @@ local function createToggle(parent, configKey, tabCategory)
 	toggleFrame.BackgroundTransparency = 0.45
 	toggleFrame.ZIndex             = 11
 	toggleFrame.ClipsDescendants   = true
-	
 	toggleFrame:SetAttribute("Tab",       tabCategory)
 	toggleFrame:SetAttribute("ConfigKey", configKey)
 	toggleFrame.Parent             = parent
@@ -2242,7 +1800,6 @@ local function createToggle(parent, configKey, tabCategory)
 		else
 			warn("[AKAT UI] Callback not found: " .. tostring(configKey))
 		end
-		SyncFloatingButton(configKey)
 	end)
 end
 
@@ -2262,10 +1819,11 @@ local function createCompactToggle(parent, configKey, tabCategory)
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
 
     local title = Instance.new("TextLabel", frame)
+    title.Name = "Title"
     title.Size = UDim2.new(1, -78, 1, 0)
     title.Position = UDim2.fromOffset(12, 0)
     title.BackgroundTransparency = 1
-    title.TextColor3 = Color3.fromRGB(210,210,210)
+    title.TextColor3 = Color3.fromRGB(210, 210, 210)
     title.Font = Enum.Font.GothamBold
     title.TextSize = 13
     title.TextXAlignment = Enum.TextXAlignment.Left
@@ -2276,19 +1834,19 @@ local function createCompactToggle(parent, configKey, tabCategory)
     local track = Instance.new("Frame", frame)
     track.Size = UDim2.fromOffset(42, 22)
     track.Position = UDim2.new(1, -52, 0.5, -11)
-    track.BackgroundColor3 = Configs[configKey] and Color3.fromHex("#8B0000") or Color3.fromRGB(30,30,30)
+    track.BackgroundColor3 = Configs[configKey] and Color3.fromHex("#8B0000") or Color3.fromRGB(30, 30, 30)
     track.ZIndex = 12
-    Instance.new("UICorner", track).CornerRadius = UDim.new(1,0)
+    Instance.new("UICorner", track).CornerRadius = UDim.new(1, 0)
 
     local circle = Instance.new("Frame", track)
-    circle.Size = UDim2.fromOffset(16,16)
-    circle.Position = Configs[configKey] and UDim2.new(1,-18,0.5,-8) or UDim2.new(0,2,0.5,-8)
-    circle.BackgroundColor3 = Color3.fromRGB(255,255,255)
+    circle.Size = UDim2.fromOffset(16, 16)
+    circle.Position = Configs[configKey] and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+    circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     circle.ZIndex = 13
-    Instance.new("UICorner", circle).CornerRadius = UDim.new(1,0)
+    Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
 
     local hit = Instance.new("TextButton", frame)
-    hit.Size = UDim2.fromScale(1,1)
+    hit.Size = UDim2.fromScale(1, 1)
     hit.BackgroundTransparency = 1
     hit.Text = ""
     hit.ZIndex = 14
@@ -2296,8 +1854,8 @@ local function createCompactToggle(parent, configKey, tabCategory)
         PlayUI_Click()
         Configs[configKey] = not Configs[configKey]
         local on = Configs[configKey]
-        TweenService:Create(circle, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = on and UDim2.new(1,-18,0.5,-8) or UDim2.new(0,2,0.5,-8)}):Play()
-        TweenService:Create(track, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = on and Color3.fromHex("#8B0000") or Color3.fromRGB(30,30,30)}):Play()
+        TweenService:Create(circle, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = on and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)}):Play()
+        TweenService:Create(track, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = on and Color3.fromHex("#8B0000") or Color3.fromRGB(30, 30, 30)}):Play()
         if _G.AkatCallbacks and type(_G.AkatCallbacks[configKey]) == "function" then
             pcall(function() _G.AkatCallbacks[configKey](on) end)
         end
@@ -2383,23 +1941,20 @@ local function createCompactSlider(parent, configKey, tabCategory, minValue, max
 	hit.AutoButtonColor = false
 	hit.ZIndex = 15
 
-	local value   = tonumber(defaultValue) or tonumber(Configs[configKey .. "Value"]) or minValue
+	local value   = tonumber(defaultValue) or minValue
 	value = math.clamp(value, minValue, maxValue)
 	local dragging = false
 
 	local function setValue(v, notify)
 		value = math.clamp(v, minValue, maxValue)
 		local alpha = (value - minValue) / (maxValue - minValue)
-		valueLabel.Text = (configKey == "Speed" or configKey == "JumpPower")
-			and string.format("%.1f", value)
-			or  string.format("%.0f", value)
+		valueLabel.Text = string.format("%.0f", value)
 		fill.Size = UDim2.new(alpha, 0, 1, 0)
 		knob.Position = UDim2.new(alpha, 0, 0.5, 0)
 		Configs[configKey .. "Value"] = value
 		Configs[configKey] = true
 		if notify and _G.AkatCallbacks and type(_G.AkatCallbacks[configKey]) == "function" then
-			local ok, err = pcall(function() _G.AkatCallbacks[configKey](value) end)
-			if not ok then warn("[AKAT UI] Slider callback failed for " .. tostring(configKey) .. ": " .. tostring(err)) end
+			pcall(function() _G.AkatCallbacks[configKey](value) end)
 		end
 	end
 
@@ -2409,7 +1964,7 @@ local function createCompactSlider(parent, configKey, tabCategory, minValue, max
 		local width = math.max(1, track.AbsoluteSize.X)
 		local alpha = math.clamp((x - left) / width, 0, 1)
 		local v     = minValue + (maxValue - minValue) * alpha
-		setValue(math.floor(v * 10 + 0.5) / 10, true)
+		setValue(math.floor(v + 0.5), true)
 	end
 
 	setValue(value, false)
@@ -2432,6 +1987,172 @@ local function createCompactSlider(parent, configKey, tabCategory, minValue, max
 			dragging = false
 		end
 	end)
+end
+
+-- ==================== CRIAR DROPDOWN ANIMADO ====================
+local openDropdown = nil  -- Referência ao dropdown aberto (para fechar ao abrir outro)
+
+local function createDropdown(parent, configKey, tabCategory, optionsList, defaultValue, onChange)
+    local currentValue = defaultValue or optionsList[1]
+    local isOpen = false
+    local dropdownItems = {}
+
+    local frame = Instance.new("Frame")
+    frame.Name = configKey .. "Dropdown"
+    frame.Size = UDim2.new(1, -10, 0, 42)
+    frame.BackgroundColor3 = Color3.fromRGB(15, 5, 5)
+    frame.BackgroundTransparency = 0.45
+    frame.ZIndex = 11
+    frame.ClipsDescendants = false
+    frame:SetAttribute("Tab", tabCategory)
+    frame:SetAttribute("ConfigKey", configKey)
+    frame:SetAttribute("ItemHeight", 42)
+    frame.Parent = parent
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
+    local titleLbl = Instance.new("TextLabel", frame)
+    titleLbl.Name = "Title"
+    titleLbl.Size = UDim2.new(0.5, 0, 1, 0)
+    titleLbl.Position = UDim2.fromOffset(12, 0)
+    titleLbl.BackgroundTransparency = 1
+    titleLbl.TextColor3 = Color3.fromRGB(210, 210, 210)
+    titleLbl.Font = Enum.Font.GothamBold
+    titleLbl.TextSize = 12
+    titleLbl.TextXAlignment = Enum.TextXAlignment.Left
+    titleLbl.TextYAlignment = Enum.TextYAlignment.Center
+    titleLbl.Text = (UI_TEXT.Options[configKey] and UI_TEXT.Options[configKey].Title) or configKey
+    titleLbl.ZIndex = 12
+
+    local valueBtn = Instance.new("TextButton", frame)
+    valueBtn.Size = UDim2.new(0, 130, 0, 28)
+    valueBtn.AnchorPoint = Vector2.new(1, 0.5)
+    valueBtn.Position = UDim2.new(1, -10, 0.5, 0)
+    valueBtn.BackgroundColor3 = Color3.fromRGB(30, 10, 10)
+    valueBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+    valueBtn.Font = Enum.Font.GothamMedium
+    valueBtn.TextSize = 12
+    valueBtn.Text = currentValue .. " ▾"
+    valueBtn.ZIndex = 13
+    valueBtn.BorderSizePixel = 0
+    valueBtn.AutoButtonColor = false
+    Instance.new("UICorner", valueBtn).CornerRadius = UDim.new(0, 6)
+    local vStroke = Instance.new("UIStroke", valueBtn)
+    vStroke.Color = Color3.fromRGB(100, 20, 20)
+    vStroke.Thickness = 1
+    vStroke.Transparency = 0.4
+
+    -- Painel de opções (dropdown menu)
+    local dropPanel = Instance.new("Frame", screenGui)  -- Parent = screenGui para sobrepor tudo
+    dropPanel.Name = configKey .. "DropPanel"
+    dropPanel.BackgroundColor3 = Color3.fromRGB(20, 8, 8)
+    dropPanel.BackgroundTransparency = 0.1
+    dropPanel.BorderSizePixel = 0
+    dropPanel.ZIndex = 500
+    dropPanel.Visible = false
+    dropPanel.ClipsDescendants = true
+    dropPanel.Size = UDim2.fromOffset(140, 0)
+    Instance.new("UICorner", dropPanel).CornerRadius = UDim.new(0, 8)
+    local dpStroke = Instance.new("UIStroke", dropPanel)
+    dpStroke.Color = Color3.fromRGB(120, 20, 20)
+    dpStroke.Thickness = 1
+    dpStroke.Transparency = 0.3
+
+    local dropLayout = Instance.new("UIListLayout", dropPanel)
+    dropLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    dropLayout.Padding = UDim.new(0, 2)
+    local dpPad = Instance.new("UIPadding", dropPanel)
+    dpPad.PaddingTop = UDim.new(0, 4)
+    dpPad.PaddingBottom = UDim.new(0, 4)
+    dpPad.PaddingLeft = UDim.new(0, 4)
+    dpPad.PaddingRight = UDim.new(0, 4)
+
+    local ITEM_HEIGHT = 28
+    local MAX_VISIBLE = math.min(6, #optionsList)
+    local FULL_HEIGHT = MAX_VISIBLE * (ITEM_HEIGHT + 2) + 8
+
+    for _, opt in ipairs(optionsList) do
+        local itemBtn = Instance.new("TextButton", dropPanel)
+        itemBtn.Size = UDim2.new(1, 0, 0, ITEM_HEIGHT)
+        itemBtn.BackgroundColor3 = Color3.fromRGB(30, 10, 10)
+        itemBtn.BackgroundTransparency = opt == currentValue and 0.2 or 0.8
+        itemBtn.TextColor3 = opt == currentValue and Color3.fromRGB(255, 200, 200) or Color3.fromRGB(200, 200, 200)
+        itemBtn.Font = Enum.Font.GothamMedium
+        itemBtn.TextSize = 12
+        itemBtn.Text = opt
+        itemBtn.ZIndex = 501
+        itemBtn.BorderSizePixel = 0
+        itemBtn.AutoButtonColor = false
+        Instance.new("UICorner", itemBtn).CornerRadius = UDim.new(0, 6)
+
+        dropdownItems[opt] = itemBtn
+
+        itemBtn.MouseButton1Click:Connect(function()
+            PlayUI_Click()
+            currentValue = opt
+            valueBtn.Text = opt .. " ▾"
+            -- Atualiza visual de seleção
+            for o, b in pairs(dropdownItems) do
+                b.BackgroundTransparency = o == opt and 0.2 or 0.8
+                b.TextColor3 = o == opt and Color3.fromRGB(255, 200, 200) or Color3.fromRGB(200, 200, 200)
+            end
+            -- Fecha
+            TweenService:Create(dropPanel, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = UDim2.fromOffset(140, 0)}):Play()
+            task.delay(0.18, function() dropPanel.Visible = false end)
+            isOpen = false
+            openDropdown = nil
+            -- Callback
+            if onChange then onChange(opt) end
+        end)
+
+        itemBtn.MouseEnter:Connect(function()
+            if opt ~= currentValue then
+                TweenService:Create(itemBtn, TweenInfo.new(0.1), {BackgroundTransparency = 0.5}):Play()
+            end
+        end)
+        itemBtn.MouseLeave:Connect(function()
+            if opt ~= currentValue then
+                TweenService:Create(itemBtn, TweenInfo.new(0.1), {BackgroundTransparency = 0.8}):Play()
+            end
+        end)
+    end
+
+    local function openDrop()
+        -- Fecha dropdown anterior se existir
+        if openDropdown and openDropdown ~= dropPanel then
+            openDropdown.Visible = false
+            openDropdown = nil
+        end
+
+        isOpen = true
+        openDropdown = dropPanel
+
+        -- Posiciona o painel abaixo do botão
+        local absPos = valueBtn.AbsolutePosition
+        local absSize = valueBtn.AbsoluteSize
+        dropPanel.Position = UDim2.fromOffset(absPos.X - 5, absPos.Y + absSize.Y + 4)
+        dropPanel.Size = UDim2.fromOffset(140, 0)
+        dropPanel.Visible = true
+
+        TweenService:Create(dropPanel, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.fromOffset(140, FULL_HEIGHT)
+        }):Play()
+    end
+
+    local function closeDrop()
+        isOpen = false
+        if openDropdown == dropPanel then openDropdown = nil end
+        TweenService:Create(dropPanel, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Size = UDim2.fromOffset(140, 0)
+        }):Play()
+        task.delay(0.18, function() dropPanel.Visible = false end)
+    end
+
+    valueBtn.MouseButton1Click:Connect(function()
+        PlayUI_Click()
+        if isOpen then closeDrop() else openDrop() end
+    end)
+
+    return frame
 end
 
 searchTextBox:GetPropertyChangedSignal("Text"):Connect(function()
@@ -2476,7 +2197,6 @@ local function BindViewportResize()
 
 	viewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
 		if not mainWrapper or not mainWrapper.Parent then return end
-
 		ApplyResponsiveWindowSize(UIState == "OPEN")
 		ClampMainWrapperToViewport()
 		UpdateActiveBarPosition(false)
@@ -2492,7 +2212,6 @@ BindViewportResize()
 ExpandBtn.MouseButton1Click:Connect(function()
 	PlayUI_Click()
 	if UIState ~= "OPEN" then return end
-
 	isExpanded = not isExpanded
 	ApplyResponsiveWindowSize(true)
 end)
@@ -2617,6 +2336,10 @@ btnYes.MouseButton1Click:Connect(function()
 	AplicarFadeSincronizado(confirmCard, true, syncTime)
 	task.wait(syncTime)
 	pcall(function() confirmBlur:Destroy() end)
+	-- Para todos os farms antes de fechar
+	if _G.AkatCallbacks and type(_G.AkatCallbacks.ShutdownAll) == "function" then
+		pcall(_G.AkatCallbacks.ShutdownAll)
+	end
 	if _G.AkatUIShutdown then
 		pcall(_G.AkatUIShutdown)
 	end
@@ -2662,169 +2385,84 @@ AplicarClickFlash(ExpandBtn,   ExpandIcon)
 AplicarClickFlash(CloseBtn,    CloseIcon)
 
 -- ==================== CRIAR ABAS ====================
-createTabBtn("Farming")
-createTabBtn("Combat")
-createTabBtn("Visuals")
-createTabBtn("Teleports")
-createTabBtn("Settings")
+createTabBtn("Main")
+createTabBtn("Boss")
+createTabBtn("Mastery")
+createTabBtn("Farm")
+createTabBtn("Player")
 
--- ==================== COMPONENTES DE SELEÇÃO ====================
-local function createDropdown(parent, key, tabCategory, options, defaultValue)
-	local frame = Instance.new("Frame")
-	frame.Name = key
-	frame.Size = UDim2.new(1, -10, 0, 60)
-	frame.BackgroundColor3 = Color3.fromRGB(15, 5, 5)
-	frame.BackgroundTransparency = 0.45
-	frame.BorderSizePixel = 0
-	frame.ZIndex = 11
-	frame.ClipsDescendants = false
-	frame:SetAttribute("Tab", tabCategory)
-	frame:SetAttribute("ConfigKey", key)
-	frame:SetAttribute("ItemHeight", 60)
-	frame.Parent = parent
-	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+-- ==================== CRIAR TOGGLES / CONTROLES ====================
 
-	local title = Instance.new("TextLabel", frame)
-	title.Name = "Title"
-	title.Size = UDim2.new(0.42, 0, 0, 18)
-	title.Position = UDim2.new(0, 12, 0, 8)
-	title.BackgroundTransparency = 1
-	title.Text = (UI_TEXT.Options[key] and UI_TEXT.Options[key].Title) or key
-	title.TextColor3 = Color3.fromRGB(220,220,220)
-	title.Font = Enum.Font.GothamBold
-	title.TextSize = 12.5
-	title.TextXAlignment = Enum.TextXAlignment.Left
-	title.ZIndex = 12
+-- === MAIN ===
+createToggle(togglesContainer, "AutoFarmLevel",     "Main")
+createToggle(togglesContainer, "AutoFarmBoss",      "Main")
+createToggle(togglesContainer, "AutoFarmMastery",   "Main")
+createToggle(togglesContainer, "AutoFarmMaterials", "Main")
+createToggle(togglesContainer, "AutoFarmChests",    "Main")
 
-	local selected = defaultValue or options[1]
-	local button = Instance.new("TextButton", frame)
-	button.Name = "Selector"
-	button.Size = UDim2.new(0.50, 0, 0, 30)
-	button.Position = UDim2.new(0.46, 0, 0.5, -15)
-	button.BackgroundColor3 = Color3.fromRGB(30, 8, 10)
-	button.BackgroundTransparency = 0.1
-	button.Text = tostring(selected)
-	button.TextColor3 = Color3.fromRGB(240,240,240)
-	button.Font = Enum.Font.GothamMedium
-	button.TextSize = 11.5
-	button.AutoButtonColor = false
-	button.ZIndex = 13
-	Instance.new("UICorner", button).CornerRadius = UDim.new(0, 7)
-
-	local arrow = Instance.new("TextLabel", button)
-	arrow.Size = UDim2.new(0, 18, 1, 0)
-	arrow.Position = UDim2.new(1, -22, 0, 0)
-	arrow.BackgroundTransparency = 1
-	arrow.Text = "⌄"
-	arrow.TextColor3 = Color3.fromRGB(180,180,180)
-	arrow.Font = Enum.Font.GothamBold
-	arrow.TextSize = 14
-	arrow.ZIndex = 14
-
-	local panel = Instance.new("Frame", frame)
-	panel.Name = "SelectionPanel"
-	panel.Size = UDim2.new(0.50, 0, 0, math.min(150, #options * 30 + 6))
-	panel.Position = UDim2.new(0.46, 0, 1, 4)
-	panel.BackgroundColor3 = Color3.fromRGB(18, 7, 8)
-	panel.BackgroundTransparency = 0.02
-	panel.BorderSizePixel = 0
-	panel.Visible = false
-	panel.ZIndex = 100
-	Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 8)
-	local pStroke = Instance.new("UIStroke", panel)
-	pStroke.Thickness = 1
-	pStroke.Transparency = 0.35
-	pStroke.Color = Color3.fromRGB(130, 20, 25)
-
-	local scroll = Instance.new("ScrollingFrame", panel)
-	scroll.Size = UDim2.new(1, -6, 1, -6)
-	scroll.Position = UDim2.new(0, 3, 0, 3)
-	scroll.BackgroundTransparency = 1
-	scroll.BorderSizePixel = 0
-	scroll.ScrollBarThickness = 2
-	scroll.CanvasSize = UDim2.new()
-	scroll.ZIndex = 101
-	local layout = Instance.new("UIListLayout", scroll)
-	layout.Padding = UDim.new(0, 2)
-
-	local function close()
-		panel.Visible = false
-		TweenService:Create(panel, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 0.02}):Play()
-	end
-
-	for _, value in ipairs(options) do
-		local opt = Instance.new("TextButton", scroll)
-		opt.Size = UDim2.new(1, -2, 0, 26)
-		opt.BackgroundColor3 = Color3.fromRGB(28, 9, 11)
-		opt.BackgroundTransparency = 0.15
-		opt.BorderSizePixel = 0
-		opt.Text = tostring(value)
-		opt.TextColor3 = Color3.fromRGB(205,205,205)
-		opt.Font = Enum.Font.Gotham
-		opt.TextSize = 11
-		opt.AutoButtonColor = false
-		opt.ZIndex = 102
-		Instance.new("UICorner", opt).CornerRadius = UDim.new(0, 6)
-		opt.MouseButton1Click:Connect(function()
-			selected = value
-			button.Text = tostring(value)
-			close()
-			PlayUI_Click()
-			if _G.AkatCallbacks and type(_G.AkatCallbacks[key]) == "function" then
-				task.spawn(function() pcall(_G.AkatCallbacks[key], value) end)
-			end
-		end)
-	end
-
-	button.MouseButton1Click:Connect(function()
-		PlayUI_Click()
-		panel.Visible = not panel.Visible
-		if panel.Visible then
-			panel.BackgroundTransparency = 1
-			TweenService:Create(panel, TweenInfo.new(0.16, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = 0.02}):Play()
+-- === BOSS ===
+-- Dropdown de seleção de boss
+createDropdown(
+	togglesContainer,
+	"SelectedBoss",
+	"Boss",
+	BOSS_LIST,
+	DropdownState.SelectedBoss,
+	function(value)
+		DropdownState.SelectedBoss = value
+		if _G.AkatCallbacks and type(_G.AkatCallbacks.SelectedBoss) == "function" then
+			pcall(function() _G.AkatCallbacks.SelectedBoss(value) end)
 		end
-	end)
+	end
+)
+createToggle(togglesContainer, "AutoFarmBoss",      "Boss")   -- também aqui para acesso rápido
+createCompactToggle(togglesContainer, "AutoSkills",        "Boss")
+createCompactToggle(togglesContainer, "AutoCollectDrops",  "Boss")
 
-	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-		scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 4)
-	end)
-end
+-- === MASTERY ===
+-- Dropdown de tipo de mastery
+createDropdown(
+	togglesContainer,
+	"MasteryType",
+	"Mastery",
+	MASTERY_TYPES,
+	DropdownState.MasteryType,
+	function(value)
+		DropdownState.MasteryType = value
+		if _G.AkatCallbacks and type(_G.AkatCallbacks.MasteryType) == "function" then
+			pcall(function() _G.AkatCallbacks.MasteryType(value) end)
+		end
+	end
+)
+createToggle(togglesContainer, "AutoFarmMastery",   "Mastery")
+createCompactToggle(togglesContainer, "SmartTargeting",    "Mastery")
+createCompactToggle(togglesContainer, "AutoSkills",        "Mastery")
 
--- ==================== TOGGLES / SLIDERS ====================
-createToggle(togglesContainer, "AutoFarmLevel",    "Farming")
-createToggle(togglesContainer, "AutoFarmBoss",     "Farming")
-createToggle(togglesContainer, "AutoFarmMastery",  "Farming")
-createToggle(togglesContainer, "AutoBones",        "Farming")
-createToggle(togglesContainer, "AutoMaterials",    "Farming")
-createToggle(togglesContainer, "AutoChests",       "Farming")
-createDropdown(togglesContainer, "FarmWorld",      "Farming", {"First Sea","Second Sea","Third Sea"}, "First Sea")
-createDropdown(togglesContainer, "BossTarget",     "Farming", {"Auto","Gorilla King","Saber Expert","Mob Leader","Vice Admiral","Warden","Chief Warden","Swan","Magma Admiral","Fishman Lord"}, "Auto")
-createDropdown(togglesContainer, "MaterialTarget", "Farming", {"Bones","Leather","Scrap Metal","Magma Ore","Angel Wings","Fish Tail","Dragon Scale"}, "Bones")
+-- === FARM SETTINGS ===
+createToggle(togglesContainer, "MobAura",           "Farm")
+createCompactSlider(togglesContainer, "AuraRange",  "Farm", 5, 100, 30)
+createToggle(togglesContainer, "AutoQuest",         "Farm")
+createCompactToggle(togglesContainer, "AutoSkills", "Farm")
+-- Dropdown de material target
+createDropdown(
+	togglesContainer,
+	"MaterialTarget",
+	"Farm",
+	MATERIAL_TYPES,
+	DropdownState.MaterialTarget,
+	function(value)
+		DropdownState.MaterialTarget = value
+		if _G.AkatCallbacks and type(_G.AkatCallbacks.MaterialTarget) == "function" then
+			pcall(function() _G.AkatCallbacks.MaterialTarget(value) end)
+		end
+	end
+)
+createToggle(togglesContainer, "AutoFarmMaterials", "Farm")
+createToggle(togglesContainer, "AutoFarmChests",    "Farm")
 
-createToggle(togglesContainer, "MobAura",          "Combat")
-createToggle(togglesContainer, "AutoSkills",       "Combat")
-createToggle(togglesContainer, "AutoFruitMastery", "Combat")
-createToggle(togglesContainer, "AutoGunMastery",   "Combat")
-createToggle(togglesContainer, "AutoSwordMastery", "Combat")
-createToggle(togglesContainer, "AutoFarmMastery",  "Combat")
-createDropdown(togglesContainer, "MasteryWeapon",  "Combat", {"Auto","Fruit","Gun","Sword"}, "Auto")
-createCompactSlider(togglesContainer, "MobRadius", "Combat", 10, 80, 35)
-
-createToggle(togglesContainer, "ESP",     "Visuals")
-createToggle(togglesContainer, "Name",    "Visuals")
-createToggle(togglesContainer, "Tracer",  "Visuals")
-createToggle(togglesContainer, "XRay",    "Visuals")
-
-createAction(togglesContainer, "TpNearestMob", "Teleports")
-createAction(togglesContainer, "TpBoss",       "Teleports")
-createAction(togglesContainer, "TpChest",      "Teleports")
-createAction(togglesContainer, "TpSafe",       "Teleports")
-
-createCompactSlider(togglesContainer, "Speed",     "Settings", 16, 100, 16)
-createCompactSlider(togglesContainer, "JumpPower", "Settings", 50, 150, 50)
-createToggle(togglesContainer, "AntiFling", "Settings")
-createToggle(togglesContainer, "SafeFarm",  "Settings")
-createToggle(togglesContainer, "Invisibility", "Settings")
+-- === PLAYER ===
+createCompactSlider(togglesContainer, "Speed",      "Player", 16, 100, 16)
+createCompactSlider(togglesContainer, "JumpPower",  "Player", 50, 150, 50)
 
 -- ==================== ANIMAÇÃO DE INTRODUÇÃO ====================
 local function ExecutarIntroAkat()
@@ -2907,16 +2545,18 @@ local function ExecutarIntroAkat()
 
 	CriarNotificacao(
 		"AKATSUKI SCRIPTS",
-		"Blox Fruits Script iniciado com sucesso. Bem-vindo, " .. player.DisplayName .. "."
+		"Blox Fruits Script iniciado. Bem-vindo, " .. player.DisplayName .. "!"
 	)
 
+	task.wait(0.8)
+	CriarNotificacaoDiscord()
 
 	openScale.Completed:Connect(function()
 		MainScale:Destroy()
 		pcall(function() Blur:Destroy() end)
 		IntroFrame:Destroy()
 		task.defer(function()
-			selectTab("Farming")
+			selectTab("Main")
 		end)
 	end)
 end
