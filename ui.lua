@@ -2043,6 +2043,7 @@ local function createAction(parent, configKey, tabCategory)
     local frame = Instance.new("Frame")
     frame.Name = configKey .. "Action"
     frame.Size = UDim2.new(1, -10, 0, 42)
+    frame:SetAttribute("ItemHeight", 42)
     frame.BackgroundColor3 = Color3.fromRGB(15, 5, 5)
     frame.BackgroundTransparency = 0.45
     frame.BorderSizePixel = 0
@@ -2056,15 +2057,28 @@ local function createAction(parent, configKey, tabCategory)
 
     local title = Instance.new("TextLabel", frame)
     title.Name = "Title"
-    title.Size = UDim2.new(1, -62, 1, 0)
+    title.Size = UDim2.new(1, -24, 1, 0)
     title.Position = UDim2.new(0, 12, 0, 0)
     title.BackgroundTransparency = 1
     title.TextColor3 = Color3.fromRGB(220, 220, 220)
     title.Font = Enum.Font.GothamBold
     title.TextSize = 13
     title.TextXAlignment = Enum.TextXAlignment.Left
+    title.TextYAlignment = Enum.TextYAlignment.Center
     title.Text = (UI_TEXT.Options[configKey] and UI_TEXT.Options[configKey].Title) or configKey
     title.ZIndex = 12
+
+    -- Sem imagem de indicador (removida por request)
+
+    -- Overlay de clique controlado manualmente para evitar sombra residual
+    local clickOverlay = Instance.new("Frame", frame)
+    clickOverlay.Name = "ClickOverlay"
+    clickOverlay.Size = UDim2.fromScale(1, 1)
+    clickOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    clickOverlay.BackgroundTransparency = 1
+    clickOverlay.BorderSizePixel = 0
+    clickOverlay.ZIndex = 12
+    Instance.new("UICorner", clickOverlay).CornerRadius = UDim.new(0, 8)
 
     local hit = Instance.new("TextButton", frame)
     hit.Name = "Action"
@@ -2073,13 +2087,53 @@ local function createAction(parent, configKey, tabCategory)
     hit.Text = ""
     hit.AutoButtonColor = false
     hit.ZIndex = 13
+
+    local clickActive = false
+
+    local function startPulse()
+        if clickActive then return end
+        clickActive = true
+        TweenService:Create(clickOverlay,
+            TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {BackgroundTransparency = 0.60}
+        ):Play()
+    end
+
+    local function endPulse()
+        if not clickActive then return end
+        clickActive = false
+        TweenService:Create(clickOverlay,
+            TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {BackgroundTransparency = 1}
+        ):Play()
+    end
+
+    hit.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            startPulse()
+        end
+    end)
+
+    hit.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            endPulse()
+        end
+    end)
+
+    -- Garante que a sombra suma caso o ponteiro saia sem soltar
+    hit.MouseLeave:Connect(function()
+        endPulse()
+    end)
+
     hit.MouseButton1Click:Connect(function()
         PlayUI_Click()
+        endPulse()
         local cb = _G.AkatCallbacks and _G.AkatCallbacks[configKey]
         if type(cb) == "function" then
             task.spawn(function() pcall(cb, true) end)
         end
-        -- Sem flash de fundo: evita sombras/press states residuais no mobile.
     end)
 
     return frame
@@ -2089,7 +2143,7 @@ end
 local function createToggle(parent, configKey, tabCategory)
 	local toggleFrame              = Instance.new("Frame")
 	toggleFrame.Name               = configKey
-	toggleFrame.Size               = UDim2.new(1, -10, 0, 42)
+	toggleFrame.Size               = UDim2.new(1, -10, 0, 60)
 	toggleFrame.BackgroundColor3   = Color3.fromRGB(15, 5, 5)
 	toggleFrame.BackgroundTransparency = 0.45
 	toggleFrame.ZIndex             = 11
@@ -2109,7 +2163,7 @@ local function createToggle(parent, configKey, tabCategory)
 	local titleLabel               = Instance.new("TextLabel", toggleFrame)
 	titleLabel.Name                = "Title"
 	titleLabel.Size                = UDim2.new(0.7, 0, 0, 18)
-	titleLabel.Position            = UDim2.new(0, 12, 0, 2)
+	titleLabel.Position            = UDim2.new(0, 12, 0, 9)
 	titleLabel.BackgroundTransparency = 1
 	titleLabel.TextColor3          = Color3.fromRGB(210, 210, 210)
 	titleLabel.Font                = Enum.Font.GothamBold
@@ -2120,8 +2174,8 @@ local function createToggle(parent, configKey, tabCategory)
 
 	local descLabel                = Instance.new("TextLabel", toggleFrame)
 	descLabel.Name                 = "Description"
-	descLabel.Size                 = UDim2.new(0.7, 0, 0, 18)
-	descLabel.Position             = UDim2.new(0, 12, 0, 21)
+	descLabel.Size                 = UDim2.new(0.7, 0, 0, 28)
+	descLabel.Position             = UDim2.new(0, 12, 0, 28)
 	descLabel.BackgroundTransparency = 1
 	descLabel.TextColor3           = Color3.fromRGB(130, 130, 130)
 	descLabel.Font                 = Enum.Font.Gotham
@@ -2222,7 +2276,6 @@ local function createCompactToggle(parent, configKey, tabCategory)
     hit.Size = UDim2.fromScale(1,1)
     hit.BackgroundTransparency = 1
     hit.Text = ""
-    hit.AutoButtonColor = false
     hit.ZIndex = 14
     hit.MouseButton1Click:Connect(function()
         PlayUI_Click()
