@@ -17,9 +17,9 @@ end
 -- ==================== ESTADO DA UI / BLOX FRUITS ====================
 local Configs = {
     AutoFarm = false,
-    AutoQuest = true,
-    AutoLevel = true,
-    KillAura = true,
+    AutoQuest = false,
+    AutoLevel = false,
+    KillAura = false,
     FarmPosition = "Above NPC",
     FarmHeightValue = 8,
     FightingStyle = "Current",
@@ -386,31 +386,35 @@ mainFrame.InputBegan:Connect(function(input)
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-	if dragUIToggle and input == dragUIInput then
-		local delta   = input.Position - dragUIStart
-		local vp      = workspace.CurrentCamera.ViewportSize
-		local hw      = mainWrapper.Size.X.Offset / 2
-		local hh      = mainWrapper.Size.Y.Offset / 2
-		local newX    = startUIPos.X.Offset + delta.X
-		local newY    = startUIPos.Y.Offset + delta.Y
-		local absX    = vp.X * startUIPos.X.Scale + newX
-		local absY    = vp.Y * startUIPos.Y.Scale + newY
-		absX          = math.clamp(absX, hw, vp.X - hw)
-		absY          = math.clamp(absY, hh, vp.Y - hh)
-		mainWrapper.Position = UDim2.new(0, absX, 0, absY)
+	if dragUIToggle then
+		local valid = (dragUIInput and dragUIInput.UserInputType == Enum.UserInputType.Touch and input.UserInputType == Enum.UserInputType.Touch)
+			or (dragUIInput and dragUIInput.UserInputType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseMovement)
+		if valid then
+			local delta = input.Position - dragUIStart
+			local vp = GetViewportSize()
+			local hw = mainWrapper.AbsoluteSize.X / 2
+			local hh = mainWrapper.AbsoluteSize.Y / 2
+			local baseX = startUIPos.X.Offset + vp.X * startUIPos.X.Scale
+			local baseY = startUIPos.Y.Offset + vp.Y * startUIPos.Y.Scale
+			local absX = math.clamp(baseX + delta.X, hw, vp.X - hw)
+			local absY = math.clamp(baseY + delta.Y, hh, vp.Y - hh)
+			mainWrapper.Position = UDim2.fromOffset(absX, absY)
+		end
 	end
 
-	if dragToggleF and input == dragInputF then
-		local delta   = input.Position - dragStartF
-		if delta.Magnitude > 5 then isDraggingF = true end
-
-		local vp      = workspace.CurrentCamera.ViewportSize
-		local half    = 22
-		local baseAbsX = vp.X * startPosF.X.Scale + startPosF.X.Offset
-		local baseAbsY = vp.Y * startPosF.Y.Scale + startPosF.Y.Offset
-		local newAbsX  = math.clamp(baseAbsX + delta.X, half, vp.X - half)
-		local newAbsY  = math.clamp(baseAbsY + delta.Y, half, vp.Y - half)
-		FloatBtn.Position = UDim2.new(0, newAbsX, 0, newAbsY)
+	if dragToggleF then
+		local valid = (dragInputF and dragInputF.UserInputType == Enum.UserInputType.Touch and input.UserInputType == Enum.UserInputType.Touch)
+			or (dragInputF and dragInputF.UserInputType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseMovement)
+		if valid then
+			local delta = input.Position - dragStartF
+			if delta.Magnitude > 5 then isDraggingF = true end
+			local vp = GetViewportSize()
+			local baseAbsX = vp.X * startPosF.X.Scale + startPosF.X.Offset
+			local baseAbsY = vp.Y * startPosF.Y.Scale + startPosF.Y.Offset
+			local newAbsX = math.clamp(baseAbsX + delta.X, 22, vp.X - 22)
+			local newAbsY = math.clamp(baseAbsY + delta.Y, 22, vp.Y - 22)
+			FloatBtn.Position = UDim2.fromOffset(newAbsX, newAbsY)
+		end
 	end
 end)
 
@@ -2069,11 +2073,19 @@ local function createTabBtn(tabName)
 	imageLabel.ZIndex          = 13
 	imageLabel.ImageColor3     = Color3.fromRGB(150, 150, 150)
 
-	if tabName == "Player"     then imageLabel.Image = "rbxthumb://type=Asset&id=71234705040146&w=150&h=150"
-	elseif tabName == "Teleports" then imageLabel.Image = "rbxthumb://type=Asset&id=131082536388353&w=150&h=150"
-	elseif tabName == "Settings"  then imageLabel.Image = "rbxthumb://type=Asset&id=88409765080516&w=150&h=150"
-	elseif tabName == "Visuals"   then imageLabel.Image = "rbxthumb://type=Asset&id=97681798175944&w=150&h=150"
-	elseif tabName == "Combat"    then imageLabel.Image = "rbxthumb://type=Asset&id=105897102093789&w=150&h=150" end
+	local tabIcons = {
+		Player = "rbxthumb://type=Asset&id=71234705040146&w=150&h=150",
+		Farm = "rbxthumb://type=Asset&id=71234705040146&w=150&h=150",
+		Mastery = "rbxthumb://type=Asset&id=71234705040146&w=150&h=150",
+		Boss = "rbxthumb://type=Asset&id=71234705040146&w=150&h=150",
+		Material = "rbxthumb://type=Asset&id=71234705040146&w=150&h=150",
+		Fruit = "rbxthumb://type=Asset&id=71234705040146&w=150&h=150",
+		Events = "rbxthumb://type=Asset&id=71234705040146&w=150&h=150",
+		Stats = "rbxthumb://type=Asset&id=71234705040146&w=150&h=150",
+		Server = "rbxthumb://type=Asset&id=71234705040146&w=150&h=150",
+		Status = "rbxthumb://type=Asset&id=71234705040146&w=150&h=150",
+	}
+	imageLabel.Image = tabIcons[tabName] or tabIcons.Player
 
 	local tabLabel             = Instance.new("TextLabel", tabBtn)
 	tabLabel.Name              = "Label"
@@ -2899,13 +2911,13 @@ task.spawn(function()
         local status = _G.AkatFarmStatus
         if status then
             local values = {
-                State = status.State,
-                CurrentTask = status.CurrentTask,
-                CurrentTarget = status.CurrentTarget,
-                CurrentQuest = status.CurrentQuest,
-                CurrentArea = status.CurrentArea,
-                Level = status.Level,
-                Progress = status.Progress,
+                State = status.State or status.state,
+                CurrentTask = status.CurrentTask or status.task,
+                CurrentTarget = status.CurrentTarget or status.target,
+                CurrentQuest = status.CurrentQuest or status.quest,
+                CurrentArea = status.CurrentArea or status.area,
+                Level = status.Level or status.level,
+                Progress = status.Progress or status.progress,
             }
             for key, text in pairs(values) do
                 local row = togglesContainer:FindFirstChild(key)
@@ -2913,6 +2925,63 @@ task.spawn(function()
                 if label then label.Text = tostring(text or "-") end
             end
         end
+    end
+end)
+
+-- ==================== SINCRONIZAÇÃO INICIAL COM O BACKEND ====================
+-- A UI não mantém um backend paralelo: ao iniciar, aplica os valores atuais
+-- aos callbacks expostos pela lógica.
+local function SyncInitialBackendConfig()
+    if not _G.AkatCallbacks then return end
+
+    local booleanKeys = {
+        "AutoFarm","AutoQuest","AutoLevel","KillAura",
+        "AutoMastery","AutoBoss","BossQuest","AutoMaterial",
+        "DetectFruit","FruitNotification","AutoSeaEvent","AutoStats",
+        "AutoServerSearch","AntiFling","ESP","Name","Tracer","XRay","ViewReach",
+    }
+    for _, key in ipairs(booleanKeys) do
+        local cb = _G.AkatCallbacks[key]
+        if type(cb) == "function" then
+            pcall(cb, Configs[key] == true)
+        end
+    end
+
+    local valueKeys = {
+        "FightingStyle","FarmPosition","MasteryType","BossSelection","BossName",
+        "BossQuest","MaterialSelection","FruitFilter","SelectedFruit",
+        "EventSelection","SelectedEvent","PrimaryStat","SecondaryStat","TertiaryStat",
+        "ServerReason",
+    }
+    for _, key in ipairs(valueKeys) do
+        local cb = _G.AkatCallbacks[key]
+        if type(cb) == "function" and Configs[key] ~= nil then
+            pcall(cb, Configs[key])
+        end
+    end
+
+    local sliderKeys = {"FarmHeight","TargetMastery","MaterialAmount","Speed","JumpPower"}
+    for _, key in ipairs(sliderKeys) do
+        local cb = _G.AkatCallbacks[key]
+        local value = Configs[key .. "Value"] or Configs[key]
+        if type(cb) == "function" and value ~= nil then
+            pcall(cb, value)
+        end
+    end
+end
+
+SyncInitialBackendConfig()
+
+-- Se a UI for executada antes da lógica, aguarda o backend aparecer e sincroniza
+-- uma única vez, sem criar um segundo controlador.
+task.spawn(function()
+    local deadline = os.clock() + 10
+    while screenGui and screenGui.Parent and os.clock() < deadline do
+        if _G.AkatBFLogicReady and _G.AkatCallbacks then
+            SyncInitialBackendConfig()
+            break
+        end
+        task.wait(0.2)
     end
 end)
 
